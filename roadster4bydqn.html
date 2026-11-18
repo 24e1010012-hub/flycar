@@ -1,0 +1,1331 @@
+<!doctype html>
+<html lang="vi">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Roadster Lab — 4 vòi · Double DQN</title>
+<style>
+        * {
+                box-sizing: border-box
+        }
+
+        body {
+                margin: 0;
+                background: #f3f5f7;
+                color: #172b3c;
+                font: 14px system-ui, sans-serif
+        }
+
+        header {
+                padding: 22px 30px;
+                background: #fff;
+                border-bottom: 1px solid #dce3e8;
+                display: flex;
+                justify-content: space-between;
+                align-items: center
+        }
+
+        h1 {
+                margin: 4px 0;
+                font-size: 25px
+        }
+
+        small,
+        .muted {
+                color: #6b7d8a
+        }
+
+        .tag {
+                font-size: 11px;
+                letter-spacing: 2px;
+                color: #07877d;
+                font-weight: 800
+        }
+
+        main {
+                display: grid;
+                grid-template-columns: minmax(0, 1fr) 330px;
+                gap: 20px;
+                padding: 24px;
+                max-width: 1680px;
+                margin: auto
+        }
+
+        .card {
+                background: #fff;
+                border: 1px solid #dce3e8;
+                border-radius: 16px;
+                overflow: hidden
+        }
+
+        .bar {
+                display: flex;
+                justify-content: space-between;
+                padding: 16px 20px;
+                border-bottom: 1px solid #e7ecef;
+                gap: 8px;
+                align-items: center
+        }
+
+        canvas {
+                display: block;
+                width: 100%;
+                height: 640px;
+                touch-action: none;
+                background: #102331
+        }
+
+        .metrics {
+                display: grid;
+                grid-template-columns: repeat(4, 1fr);
+                padding: 18px;
+                gap: 12px
+        }
+
+        .metrics strong {
+                display: block;
+                font-size: 23px;
+                margin-top: 6px
+        }
+
+        .panel {
+                padding: 20px
+        }
+
+        .panel h3 {
+                margin: 0 0 15px
+        }
+
+        label {
+                display: block;
+                margin: 16px 0 7px
+        }
+
+        input[type=range] {
+                width: 100%;
+                accent-color: #078f83
+        }
+
+        button,
+        select {
+                font: inherit;
+                border: 1px solid #ced8de;
+                border-radius: 8px;
+                background: white;
+                padding: 10px 13px;
+                cursor: pointer;
+                color: #172b3c
+        }
+
+        button:hover {
+                background: #e9f8f5
+        }
+
+        button.primary {
+                background: #078f83;
+                color: #fff;
+                border-color: #078f83
+        }
+
+        .buttons {
+                display: flex;
+                gap: 8px;
+                flex-wrap: wrap;
+                margin-top: 16px
+        }
+
+        .valves {
+                display: grid;
+                grid-template-columns: repeat(4, 1fr);
+                gap: 7px
+        }
+
+        .valves button {
+                padding: 10px 0;
+                font-weight: 700
+        }
+
+        .valves button.on {
+                background: #ffb747;
+                border-color: #ef9e20;
+                color: #392a09
+        }
+
+        p {
+                line-height: 1.65
+        }
+
+        .note {
+                font-size: 12px;
+                background: #edf6f5;
+                padding: 12px;
+                border-radius: 8px;
+                margin-top: 15px
+        }
+
+        table {
+                width: 100%;
+                border-collapse: collapse;
+                font-size: 12px
+        }
+
+        td,
+        th {
+                text-align: left;
+                border-bottom: 1px solid #edf0f2;
+                padding: 9px 5px
+        }
+
+        .bottom {
+                padding: 20px;
+                margin-top: 18px
+        }
+
+        #status {
+                color: #078f83;
+                font-weight: 700
+        }
+
+        select {
+                width: 100%
+        }
+
+        footer {
+                padding: 0 26px 24px;
+                color: #708391;
+                font-size: 12px
+        }
+
+        @media(max-width:950px) {
+                main {
+                        grid-template-columns: 1fr;
+                        padding: 12px
+                }
+
+                canvas {
+                        height: 500px
+                }
+
+                header {
+                        padding: 16px
+                }
+
+                .metrics strong {
+                        font-size: 18px
+                }
+        }
+
+        button {
+                transition: background .15s, box-shadow .15s, transform .1s;
+                min-height: 44px;
+                touch-action: manipulation
+        }
+
+        button:active {
+                transform: scale(.95)
+        }
+
+        button:focus-visible,
+        select:focus-visible,
+        input:focus-visible {
+                outline: 3px solid #52bdb4;
+                outline-offset: 3px
+        }
+
+        .valves button.on {
+                box-shadow: 0 0 15px #ffb74788, inset 0 0 10px #fff6;
+                background: #ffc35b
+        }
+
+        .valves button:disabled {
+                opacity: .5;
+                cursor: not-allowed
+        }
+
+        canvas {
+                cursor: grab
+        }
+
+        canvas.dragging {
+                cursor: grabbing
+        }
+
+        #result {
+                padding: 12px;
+                background: #f1f6f7;
+                border-radius: 8px
+        }
+
+        .bar {
+                min-height: 64px
+        }
+
+        #status {
+                font-size: 12px;
+                text-align: right
+        }
+
+        @media(prefers-reduced-motion:reduce) {
+                button {
+                        transition: none
+                }
+        }
+
+        #dqnlab {
+                grid-column: 1/-1
+        }
+
+        .dqnconfig {
+                display: grid;
+                grid-template-columns: repeat(4, 1fr);
+                gap: 12px
+        }
+
+        .dqnconfig label {
+                font-size: 12px;
+                margin: 5px 0
+        }
+
+        .dqnconfig input {
+                display: block;
+                width: 100%;
+                padding: 10px;
+                border: 1px solid #ced8de;
+                border-radius: 7px;
+                font: inherit;
+                margin-top: 6px
+        }
+
+        .dqnconfig select {
+                margin-top: 6px
+        }
+
+        .dqnmetrics {
+                display: grid;
+                grid-template-columns: repeat(4, 1fr);
+                gap: 10px;
+                margin: 18px 0
+        }
+
+        .dqnmetrics>div {
+                background: #eff5f5;
+                padding: 12px;
+                border-radius: 8px
+        }
+
+        .dqnmetrics strong {
+                display: block;
+                font-size: 22px;
+                margin-top: 5px
+        }
+
+        .networkWrap {
+                background: #102331;
+                border-radius: 12px;
+                overflow: auto
+        }
+
+        #network {
+                display: block;
+                width: 100%;
+                min-width: 540px;
+                max-height: 370px
+        }
+
+        .dqnTwo {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 24px;
+                margin-top: 20px
+        }
+
+        .qrow {
+                display: grid;
+                grid-template-columns: 130px 1fr 65px;
+                gap: 8px;
+                padding: 6px;
+                border-radius: 5px;
+                font-size: 12px
+        }
+
+        .qrow.chosen {
+                background: #dcf4ec
+        }
+
+        .qrow meter {
+                width: 100%
+        }
+
+        #learningChart {
+                width: 100%
+        }
+
+        details {
+                margin-top: 15px
+        }
+
+        summary {
+                cursor: pointer;
+                padding: 12px;
+                background: #eff5f5;
+                border-radius: 8px
+        }
+
+        #learnStatus {
+                color: #087e73
+        }
+
+        button:disabled {
+                cursor: not-allowed;
+                opacity: .45
+        }
+
+        @media(max-width:700px) {
+
+                .dqnconfig,
+                .dqnmetrics {
+                        grid-template-columns: repeat(2, 1fr)
+                }
+
+                .dqnTwo {
+                        grid-template-columns: 1fr
+                }
+        }
+
+        body>details {
+                max-width: 1272px;
+                margin: 0 auto 20px;
+                padding: 0 18px
+        }
+
+        input[type=checkbox] {
+                width: auto;
+                accent-color: #078f83
+        }
+</style>
+<header>
+        <div>
+                <div class="tag">DYNAMICS / LEARNING LAB · 4 VALVES</div>
+                <h1>Roadster · Thruster Lab</h1><small>Xe 2D lấy cảm hứng từ Tesla · 4 vòi phun cố định</small>
+        </div><span class="tag">2D SANDBOX</span>
+</header>
+<main>
+        <section>
+                <div class="card">
+                        <div class="bar"><span>01 / Không gian thử nghiệm</span><span id="status" role="status">Sẵn sàng
+                                        · kéo xe để đặt vị trí</span></div><canvas id="scene"
+                                aria-label="Không gian mô phỏng xe, kéo xe để đặt vị trí"></canvas>
+                        <div class="metrics">
+                                <div><small>Độ cao trọng tâm</small><strong id="mh">—</strong></div>
+                                <div><small>Vận tốc đứng</small><strong id="mv">—</strong></div>
+                                <div><small>Góc thân xe</small><strong id="ma">—</strong></div>
+                                <div><small>Khí còn lại</small><strong id="mq">—</strong></div>
+                        </div>
+                </div>
+                <div class="card bottom">
+                        <h3 style="margin-top:0">Bản bố trí cố định</h3>
+                        <p class="muted">Đầu xe hướng sang phải. Miệng vòi kim loại cố định; vệt sương trắng xanh biểu
+                                diễn khí thoát ra; mũi tên vàng là lực lên xe. Góc dương = ngẩng đầu.</p>
+                        <table>
+                                <tr>
+                                        <th>Vòi</th>
+                                        <th>Tọa độ trên thân (m)</th>
+                                        <th>Lực cố định / mômen</th>
+                                </tr>
+                                <tbody id="positions"></tbody>
+                        </table>
+                        <p class="muted" style="font-size:12px">Gốc tại trọng tâm; +x về đầu xe, +y lên mái. Thân 4,4 ×
+                                0,9 m; khối lượng 1.200 kg; mỗi vòi nâng 9.000 N, mỗi vòi ngang 6.000 N. Tổng lực nâng
+                                18.000 N lớn hơn trọng lực 11.772 N; lực cố định khi mở. Thông số giả lập phục vụ giảng
+                                dạy.</p>
+                </div>
+        </section>
+        <aside>
+                <div class="card panel">
+                        <h3>02 / Thiết lập lần thả</h3>
+                        <p class="muted" style="font-size:12px">Kéo thân xe để di chuyển. Kéo nút ↻ trên xe để xoay tự
+                                do, hoặc giữ Shift và kéo thân xe. Có thể dựng đứng ±90° và lật ngược ±180°.</p>
+                        <label>Góc ban đầu <b id="angleLabel">15°</b></label><input aria-label="Góc ban đầu" id="angle"
+                                type="range" min="-180" max="180" value="15"><label>Độ cao trọng tâm <b
+                                        id="heightLabel">6 m</b></label><input aria-label="Độ cao ban đầu" id="height"
+                                type="range" min="1.5" max="23" step="0.1" value="6"><label>Chế độ điều
+                                khiển</label><select id="mode">
+                                <option value="manual">Thủ công · chọn từng van</option>
+                                <option value="auto">Tự đáp · bộ điều khiển mẫu</option>
+                                <option value="dqn" selected>DQN · mạng sinh viên thiết kế</option>
+                                <option value="free">Rơi tự do · không phun</option>
+                        </select>
+                        <div class="buttons"><button class="primary" id="run">▶ Thả xe</button><button id="pause">Tạm
+                                        dừng</button><button id="reset">↺ Đặt lại</button></div>
+                        <div class="note">Tự đáp mẫu dùng điều khiển phản hồi. Chọn DQN để chạy mạng của bạn; thiết kế
+                                và huấn luyện ở mục 04 bên dưới.</div><label><input type="checkbox" id="forces" checked>
+                                Hiện nhãn vòi và lực</label><label style="margin-top:6px;display:block"><input
+                                        type="checkbox" id="flipBonus"> Lộn vòng trên không </label>
+                </div>
+                <div class="card panel" style="margin-top:18px">
+                        <h3>03 / Bảng van</h3>
+                        <p class="muted" style="font-size:12px">Bấm một van để chuyển sang thủ công và bật/tắt van đó.
+                                Đèn cam = đang mở; khi tạm dừng, hiệu ứng chỉ là xem trước.</p>
+                        <div class="valves" id="valves"></div>
+                        <div class="buttons"><button id="off">Đóng tất cả</button><button id="lift">Mở 2 vòi
+                                        nâng</button></div>
+                        <p class="muted" style="font-size:12px">V1: nâng đuôi · V2: nâng đầu<br>V3: đẩy phải · V4: đẩy
+                                trái<br>V1 + V2: nâng thẳng (18.000 N)<br>
+                                <!-- <i>* Khi bật "Lộn vòng trên không", lực van
+                                        được tăng áp để hoàn thành lộn ≥2 vòng và đáp dưới 5s. Khi tắt, chạy 100% vật lý
+                                        gốc 9.000 N / 6.000 N.</i> -->
+                        </p>
+                </div>
+                <div class="card panel" style="margin-top:18px">
+                        <h3>Kết quả lần thử</h3>
+                        <p id="result">Kéo xe trong vùng mô phỏng, chỉnh góc rồi nhấn Thả xe.</p><small>Đáp an toàn:
+                                |vᵧ| &lt; 1 m/s, |vₓ| &lt; 0,5 m/s, |góc| &lt; 5°, |ω| &lt; 0,2 rad/s tại tiếp xúc. Mô
+                                hình kết thúc tại va chạm đầu tiên.</small>
+                </div>
+        </aside>
+        <div class="card bottom" id="dqnlab">
+                <div class="tag">04 / DEEP Q LEARNING · TÍNH TOÁN THẬT TRÊN TRÌNH DUYỆT</div>
+                <h2>Double DQN · 4 van · học trực tiếp trong HTML</h2>
+                <div class="note"><b>1. Quan sát s → 2. Chọn tổ hợp ε-greedy → 3. Mô phỏng, nhận r và s′ → 4. Lưu replay
+                                → 5. Lấy batch ngẫu nhiên → 6. Tính y = r + γ(1−done)Q_target(s′, a*) → 7. Cập nhật mạng
+                                online → 8. Sao chép target định kỳ.</b>
+                        <p>Giữ quy trình replay và target network của slide David Silver. Mặc định mở rộng sang Double
+                                DQN và Huber; chọn DQN cổ điển + MSE để đối chiếu. Đây là MLP với 9 thông số vật lý,
+                                không phải CNN Atari.</p><label><input id="clipReward" type="checkbox"> Chặn thưởng kiểu
+                                Atari: r học = sign(r), trong {−1, 0, +1}</label><small>Khuyên tắt sign clipping: nó làm
+                                mất mức chênh lệch giữa đáp an toàn, va chạm và hết giờ. Mặc định chỉ chia thưởng cho
+                                100. Đổi thiết lập cần khởi tạo lại để không trộn kinh nghiệm.</small>
+                </div>
+                <p>9 đầu vào → 64 → 64 → 16 Q. Giữ thang đầu vào x/10,h/15 để tương thích mạng đã lưu; đây là thang tham
+                        chiếu, không phải biên mới. Đầu vào thêm thời gian đã bay để mạng phân biệt trạng thái sắp hết
+                        giờ. <b>File đã chứa mạng học có hướng dẫn để thử ngay</b>: chọn DQN và bấm Thả xe, hoặc Kiểm
+                        tra100 lượt. Nút Khởi tạo mạng mới xóa mạng này và tạo trọng số ngẫu nhiên. Học có hướng dẫn là
+                        tùy chọn riêng, không phải DQN tự học từ đầu. Cấu hình đề xuất giúp thử nghiệm có căn cứ, chưa
+                        chứng minh tối ưu hoặc bảo đảm hội tụ.</p>
+                <details open>
+                        <summary><b>Cấu hình phần thưởng</b> · thay đổi rồi bấm Áp dụng & học lại</summary>
+                        <p>Thưởng +200 khi đáp an toàn; +30 nếu hai bánh nằm trong vùng xanh. Va chạm thất bại −100; hết
+                                giờ −500; vượt biên −250. Chạm đất phạt thêm 2(vx²+vy²) và 10(1−cosθ). Chi phí khí 0,2/%
+                                và thời gian 1/giây. Phạt góc chỉ khi chạm đất. Thất bại va chạm luôn bằng −½ hệ số
+                                thưởng an toàn.</p>
+                        <div class="dqnconfig" id="rewardFields"></div>
+                        <div class="buttons"><button id="applyReward">Áp dụng thưởng & học lại từ đầu</button><button
+                                        id="defaultReward">Điền bộ thưởng đề xuất</button><button id="evaluateNet">Kiểm
+                                        tra 100 lượt · ε = 0</button></div>
+                        <p id="evalResult">Chưa kiểm tra độc lập. Kiểm tra không cập nhật trọng số và không thêm replay.
+                        </p>
+                        <div id="rewardBreakdown" class="note">Chưa có bước thưởng. Các hệ số chỉ có hiệu lực sau khi
+                                bấm Áp dụng; thao tác này xóa trọng số và replay cũ.</div>
+                        <p>r_gốc = thưởng kết thúc + thưởng vùng − phạt vượt biên/hết giờ − w_đáp(vx²+vy²) −
+                                w_góc(1−cosθ_chạm) − w_khí Δkhí − w_thời_gian Δt. Hai khoản va chạm/góc chỉ tính khi
+                                chạm đất. Không chặn tốc độ ở 5 m/s. r_học = 0,01 × (r_gốc + F) để ổn định thang số, giữ
+                                nguyên tương quan phần thưởng. F là trợ giúp tùy chọn, trình bày bên dưới.</p>
+                </details>
+                <div class="note" id="standardRecipe">
+                        <h3>Bộ huấn luyện mẫu · có hướng dẫn</h3>
+                        <p><b>Không gian bay: rộng 40 m (x=−20…20), cao 25 m.</b> Kéo xe đến x±18 m, cao23m. Camera bám
+                                ngang khi xe tới gần mép. Miền học mẫu giữ x±2m,cao4–9m,góc±15°; mở rộng nơi bay không
+                                có nghĩa mạng đã học ở mọi vị trí mới.</p>
+                        <table>
+                                <tr>
+                                        <th>Thiết lập</th>
+                                        <th>Giá trị mẫu</th>
+                                </tr>
+                                <tr>
+                                        <td>Mạng / thuật toán</td>
+                                        <td>9 → 64 → 64 → 16 · ReLU · Double DQN</td>
+                                </tr>
+                                <tr>
+                                        <td>Seed / tối ưu</td>
+                                        <td>42 · RMSProp · lr0,0005 · γ0,995 · Huber</td>
+                                </tr>
+                                <tr>
+                                        <td>Ví dụ</td>
+                                        <td>500 lượt điều khiển mẫu, chỉ giữ lượt an toàn, tối đa20.000 transition</td>
+                                </tr>
+                                <tr>
+                                        <td>Học từ ví dụ</td>
+                                        <td>75.000 cập nhật, batch64, loss TD +5×margin0,2</td>
+                                </tr>
+                                <tr>
+                                        <td>Target / replay</td>
+                                        <td>Sao chép mỗi500cập nhật · replay50.000</td>
+                                </tr>
+                                <tr>
+                                        <td>Chọn mạng</td>
+                                        <td>Validation20trạng thái cố định, seed10000, mỗi5.000cập nhật; ưu tiên tỷ lệ
+                                                đáp, rồi reward</td>
+                                </tr>
+                                <tr>
+                                        <td>Kiểm tra cuối</td>
+                                        <td>100trạng thái khác, seed20000, ε=0; không cập nhật/replay</td>
+                                </tr>
+                        </table>
+                        <p><b>Chạy lại từ đầu:</b> ① Áp dụng bộ mẫu → ② Tạo ví dụ & học có hướng dẫn → ③ Kiểm tra100lượt
+                                → ④ Lưu HTML. Bộ mẫu không chạy thêm RL tự do sau giai đoạn ví dụ; chỉ thử học tiếp sau
+                                khi đã lưu bản tốt. DQN tự học từ đầu vẫn có thể chọn riêng, nhưng thử nghiệm trước chưa
+                                đạt.</p>
+                        <p>Bộ mẫu là cấu hình tham chiếu có thể chạy lại, chưa phải tiêu chuẩn bảo đảm hội tụ. Cần thử
+                                ít nhất3seed riêng trước khi kết luận độ ổn định. Mạng đi kèm đã học ở miền nhỏ cũ; tỷ
+                                lệ73/100 là kết quả lịch sử, cần chạy lại kiểm tra sau khi đổi môi trường.</p><button
+                                id="applyPreset" class="primary">Áp dụng bộ huấn luyện mẫu · tạo mạng mới</button>
+                        <p id="validationReport">Chưa có validation trong phiên này. Tập validation và tập test dùng hai
+                                seed riêng.</p>
+                </div>
+                <div class="note"><b>Hướng cải thiện được chọn</b><label>Thuật toán<select id="algorithm">
+                                        <option value="double">Double DQN · khuyến nghị</option>
+                                        <option value="classic">DQN cổ điển · theo slide</option>
+                                </select></label><label><input type="checkbox" id="shaping" checked> Trợ giúp học bằng
+                                potential shaping</label>
+                        <p>F=γΦ(s′)−Φ(s), Φ=−10√(x²+max(0,h−0,72)²)−4√(vx²+vy²). Đặt Φ=0 tại mọi kết thúc. Không chứa
+                                góc nghiêng. Đây là tín hiệu phụ khi học; reward gốc và đánh giá an toàn vẫn tách riêng.
+                                Theo lý thuyết, dạng potential giữ chính sách tối ưu của mục tiêu đã chiết khấu; không
+                                bảo đảm mạng sâu hội tụ.</p><label><input type="checkbox" id="curriculum" checked> Học
+                                từ dễ tới khó</label>
+                        <p>300 lượt đầu: cao 1,2–3 m, góc tối đa ±3°, x±0,2 m; lượt 301–800: cao 2–5 m, góc tối đa ±8°,
+                                x±0,5 m; sau đó: cao 4–9 m, x±2 m và góc đã chọn. Chỉ số train theo cấp không phải tỷ lệ
+                                thành công toàn miền. Kiểm tra độc lập luôn dùng cao 4–9 m và toàn góc đã chọn.</p>
+                </div>
+                <div class="dqnconfig"><label>Seed huấn luyện<input id="seed" type="number" min="0" max="4294967295"
+                                        step="1" value="42"></label><label>Lớp ẩn (số nút, cách nhau dấu phẩy)<input
+                                        id="layers" value="64,64" placeholder="Ví dụ: 32,32"
+                                        aria-label="Các lớp ẩn"></label><label>Hàm kích hoạt<select id="activation">
+                                        <option value="relu">ReLU</option>
+                                        <option value="tanh">Tanh</option>
+                                </select></label><label>Loss<select id="lossKind">
+                                        <option value="mse">MSE · đúng slide trang 38</option>
+                                        <option value="huber" selected>Huber · tùy chọn mở rộng</option>
+                                </select></label><label>Learning rate<input id="lr" type="number" min="0.00001"
+                                        max="0.01" step="0.0001" value="0.0005"></label><label>Gamma γ<input id="gamma"
+                                        type="number" min="0" max="0.999" step="0.001"
+                                        value="0.995"></label><label>Batch size<select id="batch">
+                                        <option>8</option>
+                                        <option>16</option>
+                                        <option selected>32</option>
+                                        <option>64</option>
+                                </select></label><label>Sao chép target mỗi N cập nhật<input id="targetEvery"
+                                        type="number" min="10" max="5000" value="500"></label><label>Số lượt muốn huấn
+                                luyện<input id="episodes" type="number" min="1" max="10000"
+                                        value="300"></label><label>Góc ngẫu nhiên ban đầu<select id="difficulty">
+                                        <option value="15">±15° · nhập môn</option>
+                                        <option value="30">±30°</option>
+                                        <option value="90">±90°</option>
+                                        <option value="180">±180° · khó</option>
+                                </select></label></div>
+                <div class="buttons"><button id="demoLearn">Tạo ví dụ & học có hướng dẫn</button><button id="turboTrain"
+                                style="background:#0984e3;color:#fff;font-weight:600">⚡ Fast Train
+                                (Turbo)</button><button class="primary" id="trainNet">▶ Huấn luyện</button><button
+                                id="pauseNet">Dừng học</button><button id="testNet">Thử DQN với xe đã
+                                đặt</button><button id="saveHTML">Tải HTML kèm trọng số hiện tại</button><button
+                                id="saveJSON">💾 Lưu trọng số JSON</button><button id="loadJSONBtn">📂 Tải trọng số
+                                JSON</button><input type="file" id="loadJSONFile" accept=".json"
+                                style="display:none"><button id="buildNet">Khởi tạo mạng mới</button><button
+                                id="oneStep">1 bước mô phỏng</button><button id="oneUpdate">1 lần cập nhật</button>
+                </div>
+                <p id="learnStatus" role="status">Sẵn sàng. Huấn luyện sẽ thay đổi trọng số thực, cần nhiều lượt để cải
+                        thiện.</p>
+                <div class="dqnmetrics" id="learnMetrics"></div>
+                <div class="networkWrap">
+                        <div id="networkHost"></div>
+                </div>
+                <p class="muted" style="font-size:12px">Màu nút: kích hoạt âm (cam) / dương (xanh). Đường nối: trọng số
+                        âm (cam) / dương (xanh); độ đậm theo độ lớn. Tối đa 12 nút/lớp được vẽ, nhưng toàn bộ nút khai
+                        báo đều được tính. Bấm nút để xem chi tiết.</p>
+                <div id="neuronInfo" class="note">Chọn một nút trên sơ đồ để xem giá trị kích hoạt, bias và trọng số.
+                </div>
+                <div class="dqnTwo">
+                        <div>
+                                <h3>Tổ hợp 4 van được chọn</h3>
+                                <div id="qValues"></div>
+                        </div>
+                        <div>
+                                <h3>Mẫu cập nhật gần nhất · DQN / Double DQN</h3>
+                                <div id="updateDetail" class="note">Chưa cập nhật. Cần tích lũy đủ batch mẫu trong
+                                        replay buffer.</div>
+                                <h3>Reward mỗi lượt / Loss</h3>
+                                <div id="chartHost"></div><small>Hai dải có thang riêng, tự co giãn. Reward: xanh · Loss
+                                        đã chọn: cam. Giữ tối đa 200 điểm gần nhất.</small>
+                        </div>
+                </div>
+                <details>
+                        <summary>Định nghĩa trạng thái, hành động và quy trình</summary>
+                        <p>Trạng thái: [x/10,h/15,vx/10,vy/10,sinθ,cosθ,ω/5,khí/100,t/20]. Hành động: đủ 16 tổ hợp
+                                V1…V4. Mỗi quyết định 0,1 s, vật lý 120 Hz; tối đa 20 s. Replay 50.000, batch 64 ở mạng
+                                đi kèm (có thể chọn 8–64), warmup 512, cập nhật mỗi 4 bước; ε: mạng mới 1→0,05 trong
+                                100.000 bước; mạng đã học ví dụ 0,1→0,05 trong 100.000 bước. Huấn luyện lại có thể làm
+                                mạng hiện tại kém đi; lưu HTML trước khi thử thay đổi. Huber mặc định, RMSProp decay
+                                0,95, gradient ±1. Target sao chép theo số cập nhật, không theo số lượt.</p>
+                        <p>Reward được tính theo bộ hệ số đang áp dụng ở bảng cấu hình phần thưởng; xem từng thành phần
+                                ở bảng bước gần nhất. Các hệ số là thiết lập giảng dạy, không bảo đảm hội tụ. Chỉ số
+                                thành công hiển thị lấy tối đa 50 lượt huấn luyện gần nhất, có khám phá epsilon; chưa
+                                phải kiểm định độc lập.</p>
+                </details>
+        </div>
+</main>
+<details>
+        <summary>Căn cứ thiết kế & giới hạn thực nghiệm</summary>
+        <p>Bản 4 vòi trước: hai seed, mỗi seed 200.000 bước, cùng đạt 0/100 ca test; chính sách tốt nhất hết giờ. Thử
+                nghiệm thêm Double DQN + shaping + curriculum từ đầu (seed42): 300.000 bước, 6.943 lượt train, best chọn
+                bằng20 ca validation vẫn0/100 ca test. Bản học có hướng dẫn:500 lượt giáo viên,17.827 transition từ lượt
+                đáp an toàn,75.000 cập nhật batch 64, TD +5×margin 0,2; chọn best bằng20 ca validation, đạt63/100 ca
+                test khác (seed 40000…40099, cao 4–9m, góc ±15°, x ±2m). Trọng số này được nhúng trong file. Kiểm tra
+                tiếp bằng chính hàm mô phỏng JavaScript của HTML trên100 trạng thái cố định (LCG seed 20000):73/100 đáp
+                an toàn,27 va chạm,0 hết giờ/vượt biên; |vy|trung bình tại tiếp xúc 0,61m/s. Đây là tập khởi tạo khác
+                tập100 ca Python, không cộng/gộp hai tỷ lệ. Huấn luyện thử được thực hiện ngoài trình duyệt bằng phép
+                cập nhật tương ứng, không phải số lượt bạn đã chạy trong phiên HTML. Không chứng minh tối ưu toàn cục;
+                kết quả phụ thuộc tập thử và seed. Hãy dùng Kiểm tra độc lập thay vì nhìn reward train.</p>
+        <p><a href="https://gymnasium.farama.org/environments/box2d/lunar_lander/" target="_blank"
+                        rel="noopener">Gymnasium LunarLander</a>: tham khảo tín hiệu trong chuyến bay; giữ khác biệt góc
+                chỉ phạt tại tiếp đất. <a href="https://arxiv.org/abs/1509.06461" target="_blank" rel="noopener">van
+                        Hasselt, Guez & Silver · Double DQN</a>: giảm overestimation. <a
+                        href="https://ai.stanford.edu/~ang/papers/shaping-icml99.pdf" target="_blank" rel="noopener">Ng,
+                        Harada & Russell · Potential shaping</a>: dạng γΦ′−Φ.</p>
+        <p>Góc ±180° cho phép tương tác nhưng không có cam kết đáp được từ mọi trạng thái. Mô hình này kết thúc khi chạm
+                đất lần đầu, khác LunarLander có tiếp xúc và ổn định trên đất. Bộ phản hồi là một lựa chọn riêng, không
+                được âm thầm dùng thay mạng DQN. Nút học từ ví dụ tạo 500 lượt điều khiển mẫu với góc ±15°, cao 4–9m;
+                chỉ giữ lượt an toàn, sau đó 75.000 cập nhật TD + 5×margin 0,2. Đây là biến thể có hướng dẫn với replay
+                đều, không phải DQfD đầy đủ (không prioritized replay/n-step). Bộ huấn luyện mẫu trong bản không gian
+                rộng chọn checkpoint bằng20ca validation LCGseed10000; kết quả mạng đi kèm trước đây được chọn bằng20ca
+                NumPyseed10000, nên hai phép chọn không đồng nhất. Không cam kết chạy lại ra đúng73%. Khi vừa tạo ví dụ
+                và học tiếp trong cùng phiên, mỗi batch lấy 25% mẫu từ tập ví dụ cố định. File trọng số không chứa
+                replay/ví dụ/optimizer; nếu mở lại, cần tạo ví dụ mới để giữ khoản giám sát. Lưu trọng số không tương
+                đương resume toàn bộ huấn luyện. <a href="https://arxiv.org/abs/1704.03732" target="_blank"
+                        rel="noopener">Hester và cộng sự · DQfD</a> là căn cứ cho kết hợp TD và loss giám sát.</p>
+</details>
+<footer>Mô phỏng giáo dục với lực và mômen vật rắn 2D; không mô phỏng đầy đủ hệ thống xe Tesla, giảm áp bình khí hoặc hệ
+        treo.</footer>
+<script id="savedModel"
+        type="application/json">{"origin":"Mạng Double DQN tối ưu: 82/100 an toàn, thời gian \u003c 4.5s, đáp thẳng góc ~0 độ","warmStart":true,"demoCount":500,"sizes":[9,64,64,16],"activation":"relu","layers":[{"w":[[0.158492296,-0.3385558459,-0.3530647426,0.02146236526,-0.3126032113,-0.2238297723,0.2115742353,0.0121837247,-0.3076846271],[0.2463093888,-0.2502324012,-0.2287995803,0.00528307256,-0.1694857764,-0.1122229246,-0.2260435258,0.0164530547,-0.4381056203],[0.7755921208,-0.2948089969,0.4623779685,-1.227591222,-0.5802328083,0.08110796294,0.2644422981,0.04926248879,-0.6238693854],[0.1990784564,-0.3320938629,0.3829810626,0.1815753321,0.01547499801,-0.2956852271,-0.4322685492,-0.180831092,0.07840427008],[0.3027031282,-0.4676758422,0.03367904419,0.2877306745,0.234155042,-0.1088249671,-0.3308137117,-0.4465713887,-0.4233127658],[0.2655354882,0.1192242226,-0.3628151965,-0.2357391919,0.2568478874,-0.1983607254,0.139673301,-0.3359733162,-0.4294510675],[0.09857943832,0.01500328389,-0.4235148296,-0.07507950496,0.1947676851,0.1211166832,-0.2654520932,-0.4589087419,-0.1271269331],[-0.2192611689,-0.406670464,0.2056971215,-0.404518874,-0.03385289906,-0.4600592051,0.2807773261,-0.05734213327,0.01272437614],[-0.0003801437198,-0.4629636371,0.3100313707,-0.4592452801,-0.4685063178,-0.4112786692,0.1453275281,-0.438840808,0.3898649245],[0.4030065694,-0.0259263427,-0.1198565027,0.1149705224,-0.4394019205,-0.1006234892,-0.3419550103,-0.04070176126,0.2768930856],[0.3648892538,-0.7313817485,0.5118094945,1.788185113,-0.6220552882,0.6592716082,-1.110226585,0.3511735611,0.9549169136],[-0.1576053665,0.1986498414,-0.3183273992,-0.3741605122,-0.0451119972,-0.1572145001,0.2603194192,-0.3313510761,-0.3444141999],[-0.5154736242,0.46592996,-1.131860967,1.977810098,1.155824917,0.4236211423,1.277239537,0.06215664376,0.05547946642],[0.4618148172,0.1422060847,-0.4485724951,-0.1457511926,0.4045243272,-0.4458139532,-0.2642248292,-0.2211417736,-0.4351247665],[-0.2676411382,0.08705749531,-0.07333736322,-0.3830324132,0.4652617954,-0.356953775,-0.3713777445,-0.1684716262,-0.1660861286],[0.03108875875,0.0889408775,-0.7309176062,-1.235318464,0.1187612336,0.4750407757,-0.5899596131,0.21047601,0.662544593],[-0.2079394568,0.04275073933,0.1267851455,0.118161542,-0.2900939186,-0.1911411841,-0.298827909,-0.4435128511,-0.2537586274],[0.5818081247,1.90065439,0.3804672756,-2.359293983,0.6436329348,-0.5104004989,-0.03080994708,0.02823705546,0.003427727364],[0.3899694353,-1.544098896,0.191112423,-0.3667016426,0.7116522899,0.1918789288,0.2660639367,0.5993152345,0.006629517157],[0.1975650011,0.7367673939,1.391464538,-1.372021496,-1.448575206,-0.3849310493,-1.700953615,0.4858041699,0.2945317949],[-0.2332563176,-0.1440075742,-1.009566724,-1.004140629,1.54167395,0.3685333911,1.558936133,-0.1046396027,-0.5431651587],[0.0397883572,0.1093012489,0.4171291918,0.3038998691,0.2331715251,-0.2069381886,-0.151147363,0.02413030907,0.2868892619],[-0.3415322673,1.492800299,0.4617130616,-2.119800866,0.1690629882,-0.4655472228,0.7948708815,0.1073000487,-0.4599324461],[0.05578853105,0.09844722823,0.1296453992,0.8807872383,1.006593256,0.7061264167,0.5921830641,0.3533182535,0.7622767103],[-0.605314474,0.07642066011,-0.344172637,-0.1716270808,-0.9955436005,0.2196928972,-1.616249591,0.2679095434,-0.07542704427],[-0.4933449971,1.346399449,-0.7611761177,0.4581184143,-0.02192999525,0.128393058,-0.8161216565,0.5614802441,-0.5536762036],[-0.4189061889,-0.2692259435,-0.1756741213,-0.3096952324,-0.1967335937,-0.2162235894,0.3602114819,-0.02825280427,-0.1249284047],[0.06311182934,0.6853662745,0.7166828133,1.593894594,-0.4996466202,0.4301974861,-0.4597999057,-0.228315685,0.4738038924],[0.08777000046,0.1057157648,-0.1065291439,0.429983631,-0.3970954451,-0.02601934489,0.3586766296,-0.1765569218,0.3964310182],[0.3595971433,0.368340273,-0.4558471918,-0.1901145347,0.07565363723,-0.4538484973,0.3684457907,-0.08398056332,0.1662370802],[0.04487395406,0.4011862457,-0.3465167719,0.4803660166,0.4510822533,-0.3267696376,-0.03071595821,0.4012451255,-0.579530658],[0.4511634181,0.1678631833,0.01016943631,-0.5484380159,-0.4045478019,-0.009576718185,-0.08767507316,0.02680306678,-0.1972687497],[0.07970964719,-0.3782314978,-0.4909338003,1.269046804,-0.1973571604,0.554334319,-0.1510144172,-0.4308013791,0.09611831443],[-0.3550139994,-0.9459592239,-0.3283027701,0.5589448515,-1.518803571,0.7298768632,-1.634059792,0.08189558671,0.1284675853],[0.1337535096,0.1437521931,0.3399947792,-0.1355455615,0.108726077,-0.07421148184,-0.06738411296,-0.2872324448,0.2739098936],[0.102855177,0.9011167955,-0.1822425699,0.3699380507,0.7433214101,0.3792608523,0.8904979784,-0.2228486803,-0.3016689937],[0.207719666,0.4926806163,0.3745001502,-0.4896610417,0.09671113892,0.2196546321,-0.1079517646,0.4859669315,-0.03941489311],[0.3388730768,-0.4324146025,-0.08170744197,-0.07527806535,-0.3171176753,0.05913047015,-0.08834563296,-0.4696994503,0.4271178943],[-0.03649457528,-0.1801072651,-0.01485956358,0.2023515521,-0.08106422662,-0.3813376854,-0.2937751297,0.2799471956,-0.03477265086],[0.3212952339,-0.1879772997,-0.5066068733,-1.132631533,1.251284699,0.3924490644,1.075952209,-0.0005184243638,0.5247237994],[-0.07258436457,-0.8539964912,-1.064835965,-1.382107465,0.922989885,0.1613238603,1.118480066,0.2298016452,-0.6042144255],[0.1445172989,-1.518906579,0.6301720874,-1.695997367,-1.272050759,0.4917012093,-1.682941791,-0.1091581344,0.7747716796],[1.138727078,1.221364119,1.393691837,0.5887800578,-1.305937818,0.3751938303,-1.206146315,0.1631462497,-0.3918013431],[-1.405903969,0.2620115156,-1.970601818,0.2009817536,0.669838887,0.179779201,0.6532813189,0.3593698815,0.3524140128],[0.7688567283,-0.07350108145,-0.5889742117,1.813471155,1.635868846,0.4515629143,2.284970301,0.3529028997,0.173522451],[-0.1740786837,0.6900863488,0.7442983623,1.089721903,-0.215520362,0.3776750685,0.7354036885,0.3273001767,0.4869560988],[-0.4988486982,0.9423427812,-1.263262169,-0.4736749885,0.8702875877,-0.1264350924,0.7281360469,0.4257101193,0.3925127854],[-0.4149597183,0.3269643926,-0.1437663412,0.3300441177,-0.1041277943,-0.3735156702,0.4484566023,-0.347049569,0.3612682517],[0.01166770108,0.441611173,-0.4425209738,0.05094792029,0.1477538642,-0.1719232744,-0.349180932,-0.2835830567,0.2325154378],[-0.007053792035,-2.162487727,-0.4660891757,-0.365678314,0.1401251641,0.6172648993,0.2617360635,-0.2108185201,0.6842096284],[0.3687460566,-0.3661582598,0.2775595778,-1.759647968,0.3414385595,0.4523016846,1.210911117,0.1959320687,0.783317322],[-0.1742458783,-0.2459169125,-0.08658225974,0.3118150468,0.3509412891,-0.4197324652,0.3098384373,-0.04342492691,0.3185860807],[0.4684658559,1.319226514,0.01530394442,0.6646194578,-0.571982337,0.1697366379,-0.07824553671,-0.05059273817,0.4164440157],[-0.04356840619,0.1674096156,-0.204850297,-0.1252948439,-0.3391446303,-0.364380303,-0.3682826666,-0.005480137175,0.01221294476],[-0.04066751084,-1.637763092,0.2602419882,-0.861298878,0.2414481232,0.5750172344,0.02931870791,0.2355473677,0.9707058145],[-0.5159804293,-0.2290247198,-0.2333155331,-0.4442670385,-0.6225264062,-0.281597274,-1.289781683,0.5001062383,-0.1060481851],[0.3236401549,1.047211553,0.4343268686,1.0820015,-0.9684395214,0.3461730801,-1.429757143,0.03011402614,-0.2419267551],[-0.1171282798,0.8853739556,-1.110579825,-0.676888882,0.5357910547,-0.04377799993,0.4463208198,-0.06894461667,0.6527165952],[-0.3272420222,0.1220787491,-0.2238125575,-0.0235389181,0.02343624706,-0.1633107968,0.1521192926,-0.2118504034,-0.3065916307],[-0.01476052771,-0.4296452362,-0.3545961756,-0.3086853926,-0.2596417866,-0.2697315639,0.2142991089,-0.127274592,0.3684529539],[-0.5211217024,0.01589843578,-0.5117346874,0.350742692,-0.4943183062,-0.2146904472,0.05332241235,0.2839335695,0.3410216176],[0.4557748307,-0.4123315711,0.1011564392,0.6540346631,0.459995837,-0.2650785453,-0.3258516082,0.6187411103,-0.2281484091],[-0.3548668545,-0.2174691565,-0.3973693381,-0.3291103872,-0.2367558687,-0.3254304831,0.1403643969,0.1198279845,-0.06717839464],[-0.3957780856,0.008583352559,0.2106907522,0.3629592817,0.06349893437,-0.1354367362,-0.0120315276,0.006229502874,-0.4377014979]],"b":[0,0,-0.1191960815,0,0,0,0,0,0,0.01999737721,0.3611799842,0,0.277438311,0,0,0.03598241056,0,-0.1650409563,0.2039608296,0.08040973717,-0.03063436768,0,-0.1573325328,0.2336233553,0.01681028041,0.08794146719,0,0.1145751074,0.001170317403,0,0.1355838143,-0.1104947033,0.1032161629,0.2329175294,0,-0.03572827083,-0.02050936511,0,0,-0.01920235145,0.03469540442,0.2887028906,0.130461637,0.1229088368,0.1122901631,0.1699706621,0.01873562154,0,0,0.1138842207,0.01752291095,0,0.06704656647,0,0.2198753572,0.08309890674,0.07147870743,0.06393918465,0,0,0.1166495601,0.1369170148,0,0]},{"w":[[0.1580661312,-0.07368311904,0.5276488095,-0.1384376641,0.1428698978,0.1249178197,-0.01399754158,0.1061299329,-0.09493127162,0.04648295389,0.1891452071,-0.114321913,-0.9257799639,-0.1598408204,-0.09368483653,0.2987302442,0.03666054099,0.2279775542,0.3096729036,0.9669384789,-0.4205034221,0.135601358,-0.1093253394,0.006286940076,0.04375018745,-0.2522295825,-0.1193479843,-0.02756013496,0.1679903374,-0.00832473003,-0.2450188648,0.2185731382,-0.2831441136,-0.08788725031,-0.113982333,-0.04196793192,0.388868887,-0.1714141017,-0.04764413615,0.01208193241,-0.1868401287,0.6775916101,0.7719701408,-0.9222071785,-0.5356799778,0.04843401634,-0.5238855011,-0.01371711769,-0.004082826709,0.3631291012,0.6315692414,-0.08461173776,0.1158942558,0.04323526068,0.4965832736,-0.1634730874,0.01364679816,-0.3440308657,-0.04136082174,-0.03062658758,-0.07477434097,-0.05848413985,0.1145481665,0.0901701537],[-0.0339154988,-0.118154592,0.1096198573,-0.1744958167,0.1309182079,0.01308957317,-0.103546797,0.03129794736,0.08146709784,0.03078459513,-0.1122925717,0.08617653977,0.1617857196,-0.1149668814,-0.04605246635,-0.009743374913,-0.01491743589,0.07289048567,0.05172779302,-0.1746016174,0.00487457902,0.1578662921,0.08635705053,0.08146515976,-0.1064368712,-0.1353853778,0.0420161165,0.01292835487,0.04672341536,0.1597591467,0.01266909747,-0.04537128588,0.04409539726,-0.1195127779,0.0472130921,0.13423886,-0.02372712756,-0.167420348,0.03214136968,0.158735295,0.09208420982,-0.04646451094,0.008112406929,-0.1443333743,-0.02857803808,-0.1446089504,-0.1388554123,0.1429530505,0.1067291757,0.1432760575,0.1580821068,0.1731199753,0.05648785422,0.111639341,-0.09431937748,-0.0148990685,-0.02704253019,-0.1487743631,0.1092145475,0.0905886189,0.1477989882,0.05872281104,0.1613512273,0.09848464641],[-0.1581250606,0.1134173125,0.02197718523,0.1032051354,0.01459672176,-0.003566493076,-0.1637509758,-0.02427378322,-0.1377722363,0.07122887262,-0.5776198192,-0.1281065968,-0.1942624184,0.05402213478,-0.06708197903,0.280446266,-0.1729820573,-0.160692499,0.3616426237,-0.06774597619,0.7791578807,0.0157896804,0.1234963439,-0.1123584232,0.2536349686,0.0419677748,-0.0160123287,-0.7434257859,-0.1000859574,0.1183294461,0.0111275753,-0.1090488345,-0.1620254187,0.02611649541,-0.1643547169,-0.01778699634,0.2111438604,-0.0666701844,-0.04842036652,0.2898417896,0.9294005329,0.1509799517,-0.382253508,0.6158413406,-0.1407184882,-0.6480450131,0.23873277,0.09628091595,0.09425755507,0.5029708725,0.3252148072,-0.1047663046,-0.2470599428,-0.09407954308,0.2940509016,0.2541615965,-0.6018668208,0.1744855951,0.1293501965,-0.04762146592,-0.09258062007,0.09901322031,-0.1011922783,-0.07932498706],[0.06002473916,-0.1218309343,0.0006021595185,0.05817852379,0.04160015641,0.07161972935,-0.135246845,0.0704648224,-0.05251656752,-0.005415740424,0.642486428,-0.009873028425,-0.3677734991,0.0883598919,-0.09172105878,0.006752292675,-0.129161675,-0.1624558134,-0.2217324679,0.9410445296,-1.078032313,0.116520448,-0.5269672129,-0.3350557256,0.9295351247,0.4653810519,-0.001112301349,0.5080567987,-0.01919781246,0.1759777947,-0.08859744115,-0.001446014319,-0.2354170775,0.8106331331,-0.07415460678,-0.4136446297,0.06412454038,-0.04357535645,-0.1220959358,-0.9857725585,-0.7341724872,0.3331748377,0.9648016041,-0.4015830726,-1.04244748,0.0007313560258,-0.3464876916,-0.04917260363,-0.1522001318,-0.5757843495,-0.7172389015,-0.05203761502,0.006007653761,0.07323638072,-0.3238962278,0.7088942866,1.037735069,-0.4588299787,0.0689816585,-0.1447365629,0.004797527117,0.03183849511,-0.0870681873,-0.05171766693],[-0.1245678002,0.05444731515,-0.1607009788,-0.1549896439,-0.01426219662,0.1158278393,-0.02270673178,0.09119037678,0.009802691097,0.0008549607376,0.4047067754,-0.1615703886,0.7708454061,0.05355802586,0.1062719252,0.1149217913,0.06514892913,-0.04316567172,0.2705999718,-0.6108965912,0.3980150965,0.1498874481,0.0125133109,0.7357678137,-0.3935373743,-0.1410671914,-0.02931995641,0.2854902663,0.06460373941,-0.1541360681,0.06775216149,-0.2035237342,0.3349506717,-0.2094889029,-0.04936891361,0.4126045888,0.007506397342,0.09940073879,0.1418662883,0.4192629615,0.150721637,-0.4569209502,-0.06353052493,0.3322062652,1.158869125,0.4109547134,0.3629062927,-0.05501027225,0.08253716549,-0.1724871667,0.4363878192,-0.1521049669,0.2461810561,0.1246471005,0.3323957298,-0.5599346306,-0.1680613643,0.141651702,0.05103948644,-0.173379994,-0.08961299266,0.1133039737,-0.1498059989,-0.01283793607],[0.06034406196,0.09431463096,-0.13211714,-0.00747444008,-0.07384975582,-0.1519208482,0.003788174139,0.1425248856,-0.093805986,-0.05672208786,0.5601157995,-0.07268894189,-0.1965218419,0.01987400752,0.1093682714,-0.1963868576,0.03083030075,-1.199158407,0.3462805189,-0.2570919791,-0.07395451114,0.1020107619,-1.019652669,0.216909749,0.1277334854,-0.5299203271,-0.1104142875,0.02413014956,-0.1291363208,0.138469587,0.08887042395,-0.2563273818,-0.2980004429,0.4100100289,0.1359522707,-0.3773844682,-0.04697534176,-0.04101475858,-0.1579372117,-0.04645716983,0.09351799139,0.5566438309,-0.2436027804,-0.1067681888,-0.0335018144,-0.1313421389,-0.5242467156,0.1719563581,0.08803465175,0.5769517379,0.02862839476,-0.0573192154,-0.3879150072,-0.02457481429,0.6258304938,0.2047012048,-0.2078806599,-0.4624355118,0.02367907275,-0.1221593952,0.1338825766,0.1934149806,0.09416363329,-0.0554988777],[0.009779127058,0.09477516299,0.1733194368,0.08395342901,0.06069843217,0.0997539493,-0.04208665155,-0.104931636,-0.169925863,-0.02566711162,0.2603844086,-0.1221702843,0.1737052659,0.11074835,0.1343163043,0.02844776809,-0.1726141392,-1.264200409,0.6486023754,-0.3950332106,-0.01948932347,-0.002303160883,-0.9642834743,0.1266677709,0.03470970783,-0.3971229884,0.02148023676,-0.1717795037,0.1110995572,0.1409988788,0.1446710905,-0.01992845123,-0.1953278554,0.4413651988,0.1624297638,-0.2821634101,-0.2381844607,-0.0398063457,-0.06551876937,0.09905946181,0.4968500775,0.2714927308,-0.3568419209,-0.173760323,0.22256863,-0.2097455284,-0.1169277639,0.0541624306,-0.0244808935,0.670894476,-0.1599292449,0.06408738963,-0.4919258225,-0.1767491518,0.4863474897,-0.03210703829,-0.2724666662,-0.1702351172,-0.1124082562,0.05985615687,-0.1061214312,0.1907223587,-0.04023780464,-0.1341480465],[0.06169995834,0.005668606988,0.1019440107,-0.01366684934,0.1250952815,0.03110413574,-0.09706566442,0.04396890182,0.1367015144,0.1365368305,-0.07199898427,-0.08837154534,-0.0928003312,0.01687668944,0.05518827963,0.1736788714,-0.1507346726,0.3121441659,-0.08337021517,0.1372095076,0.2337774944,-0.1416762058,0.230602394,0.1191740008,0.01299495471,0.3308785929,-0.1476262654,-0.1659097773,-0.104188529,0.05140176906,0.1408309355,-0.07017467474,0.08314096211,-0.2599086547,-0.05786322354,0.1855824271,0.04465495666,-0.01153289809,0.1058438444,0.1977143966,0.2347474429,-0.2787108752,0.1790083654,-0.04508366683,0.007064863642,0.06498016044,0.2467942978,0.05718504931,-0.07921030746,-0.2629433177,0.0566339852,-0.06582078891,-0.01177916823,0.005822301563,-0.1344200442,0.02550667362,0.1523618142,0.04938149333,0.1212845803,0.1515245009,-0.03024209091,0.139714652,-0.02863300872,-0.09147695],[-0.1312059525,0.03036024551,-0.03725934088,0.1686655832,-0.1020367823,0.1280912161,0.06004617281,0.03757492082,-0.1385260383,-0.06885692396,-0.1364956184,-0.09271840254,-0.06906283389,-0.06350466335,0.00474856845,0.1546835059,-0.1534213159,-0.03222296488,-0.1161137689,0.1352029248,-0.1601632028,-0.02417222117,0.009291576345,-0.08005836747,0.1052391443,0.07724927379,0.1071594079,0.01563012794,0.04395921694,0.1310960388,-0.05754542876,0.1557607063,-0.1416578445,0.00437426055,-0.1498885186,0.04612222098,-0.1195580992,0.1351032086,-0.01755486368,-0.03924846541,0.03663614956,0.1568560918,-0.1212790385,-0.06569808835,-0.04984578443,-0.1470588838,-0.09090416277,0.06021901423,-0.1176267638,0.1190601135,0.1089903173,-0.14678837,0.0203539341,-0.002868545874,-0.1232892221,0.06447718716,-0.171688957,-0.1430950391,-0.1260045971,-0.01757408989,-0.1559397884,-0.1356307804,0.1703923992,-0.09284538178],[0.1666702225,-0.1098367488,-0.1843295707,0.08885178892,-0.09039284003,0.1329055463,0.1017789169,-0.1117478291,0.1662969395,0.09193784635,0.005156925729,-0.1554282737,-0.1932114905,-0.1043372197,0.1583758878,0.4168807008,-0.003347547113,-0.1255088977,-0.1872592789,0.1787602269,-0.228804658,-0.08752706046,0.04089410268,-0.03248848043,0.2493846946,0.07807707579,0.03364548122,-0.1647054646,0.08450456794,-0.1767574691,-0.0979928824,0.02787200369,-0.04127675625,0.4754307594,-0.04694699353,-0.1891949657,0.1720188936,0.006809761065,-0.02616484103,-0.02579854772,-0.1301885224,0.3384074633,-0.2066899513,0.4125138665,-0.3902572588,-0.2231719636,0.1684638879,0.119311456,-0.1228434233,0.2573044452,0.2650947099,0.1507681098,0.1741716468,-0.1039147173,0.01409189641,0.2142320276,0.1448040641,0.2201805738,-0.03907562126,0.1292386425,-0.03266527006,-0.07440295253,-0.0193022442,0.1662777133],[-0.02896112819,0.1155839159,-0.01979329664,-0.08565140634,0.1193864691,0.09500148729,0.07722709409,0.1666193871,0.07310523471,-0.1532982597,0.5542326458,-0.06021333791,-0.4269158577,0.02719736638,-0.02322872083,0.1497174324,0.1440781689,0.2417725162,0.2515000459,0.2458488063,-0.5047474429,-0.02544805106,-0.01020362176,0.3247496393,0.1887136806,-0.08654621606,-0.04547397648,0.2471295756,-0.1307948676,0.02137321175,-0.3199671157,0.06957018596,-0.00993533302,0.2249578388,-0.04014466866,-0.1094566852,0.005919711795,-0.1012815498,0.1767016821,0.08044739444,-0.2186195101,0.6824267831,0.2509834246,-0.2143213791,-0.04462874656,0.3251068992,-0.1414548264,-0.09512568466,-0.1425959293,0.08448508518,0.4814439768,0.00814934448,0.2605934972,-0.125951825,0.5368503815,0.1164600686,0.05943897129,-0.1531308553,0.006579053991,-0.1097993403,-0.1369470334,-0.1018864698,0.1207340048,-0.1250446723],[-0.1470979394,-0.05786490876,-0.2078311219,0.1745911859,-0.1094346603,-0.1456376178,-0.1228517506,0.0685830234,0.09118573371,0.02923762454,0.05957447246,-0.1584616917,-0.05420480413,-0.1325079685,-0.06699659955,0.08264596,-0.1530066151,-0.3451413459,-0.1069002494,0.2319234012,-0.009245128335,-0.004388328963,-0.02443730516,-0.1748831004,0.0889435745,0.09565713153,-0.07759483094,0.1356529202,0.06884912719,0.1097243271,0.1725005532,-0.03736213214,-0.1730889258,0.02647474716,0.01840940058,-0.1693475756,0.1058519931,0.03082454326,-0.1624677197,-0.3481860413,-0.1956035179,-0.06133444637,0.0755981436,0.03556441252,-0.1504612767,0.217905616,0.1068611122,0.155735001,0.1559599802,-0.02985919511,-0.2292069043,-0.08595293971,0.09408215805,0.1309859751,0.004037109345,0.1692346304,0.1265209572,-0.245420613,0.0988793719,0.1039736266,0.1927301603,-0.1177490587,0.1764436272,0.1582381019],[0.02944633012,-0.1322737113,-0.047167994,-0.1290417784,0.02585932626,-0.1216196393,-0.1637683752,-0.007054463034,-0.1414339627,-0.05300077812,-0.04910610875,-0.0571414074,0.3970200369,-0.002598663139,0.01021120881,-0.03160341641,0.0405472547,-0.2506289515,0.1012712064,-0.4652285749,0.3593995574,0.08118595597,0.03934229499,-0.0890525356,0.06040023267,0.4260897578,-0.01094337366,-0.06052901296,0.1087219139,-0.08966465099,0.06031560881,-0.04484216311,-0.08913725733,-0.01261223204,0.02649770614,0.07054978585,0.1260606273,0.05186293213,-0.04690102054,0.1239471871,0.3227100468,-0.321511605,-0.3914576208,0.4297572982,0.2811067471,-0.2145093465,0.4271107439,-0.1086116187,-0.007707980048,-0.1342913865,-0.2804358864,-0.01148965016,-0.1142254467,0.1707780888,-0.2665569171,0.2009367789,-0.07419846881,0.1884303542,0.03732334957,0.04151701055,0.1743522595,-0.05547901357,0.0610003656,0.1250073836],[-0.1233955006,-0.07620393275,-0.150828621,0.1431458561,0.147680326,-0.1434689229,-0.0486038245,0.1654610179,0.1671245792,-0.1413108132,-0.04457669461,-0.1605213807,0.02570493297,-0.173788867,-0.0456861773,-0.06224912486,-0.1478534042,-0.07910845022,-0.06447506786,-0.04816263195,-0.1530910229,0.08257412548,-0.09201788323,-0.07709087515,0.02055785002,0.07823733199,0.1292843075,-0.0547553691,-0.1622371127,0.08835866421,-0.1420742007,-0.03494913494,0.1660380675,-0.06952636058,-0.03626186324,0.04287759084,-0.1300640773,0.1658265591,-0.07951524946,-0.04101575249,-0.1480650675,-0.102034646,-0.001837534025,-0.05648513964,0.03857808809,-0.1013109604,-0.07744455882,0.02140799591,-0.0857364511,-0.07720422086,0.01259371945,-0.03156781545,0.1496664358,-0.06761369774,0.1013217111,-0.02919293075,-0.1609627448,0.1030389494,-0.05418868924,-0.1073337013,-0.09597653503,-0.1706251507,0.1509214353,-0.09801078034],[-0.1760133079,0.1671491356,0.07755063036,-0.08154540174,0.03924969153,0.08821292716,-0.1089617428,-0.136903268,-0.1763698961,0.1628980275,-0.7368194947,0.1257203184,-0.5499209979,0.1412439517,0.06110773207,0.2500018562,-0.02109480449,0.5964388595,-0.3842892879,0.5710661665,0.2206311156,0.06627031008,0.6233037186,-0.2009687617,0.09686642156,0.3252300106,0.02706364035,-0.3800510412,0.04323859775,-0.1489582435,-0.1530415618,-0.0194962092,-0.07615155882,-0.4373264322,-0.05724852707,0.08471269824,0.05878852161,-0.1726758524,0.1589349997,0.2196262836,0.09681427357,0.04647314386,-0.007105913279,0.2241369941,-0.747201029,-0.06477920451,0.2084350364,-0.1254300012,-0.1348454779,-0.4195727855,0.3324190661,0.149700544,0.1467012312,-0.1175990634,-0.3008197026,0.03150023621,-0.1429480579,0.2985376975,0.08930266998,0.04631862402,-0.1248789332,0.06441389714,-0.003365125806,0.1493650427],[0.09835659737,-0.099434343,0.02512300913,0.1650151085,0.02171578348,-0.163874611,-0.1033796774,-0.02519564741,-0.05105868811,0.02815376497,0.05998628148,0.1030446526,-0.07853177053,-0.0041879314,0.04761450791,0.03032723086,0.1065356578,-0.02428305372,-0.09825754882,0.04251935744,-0.06271934672,-0.09473976145,-0.1293870747,-0.1353570179,-0.08360441919,-0.1685182997,-0.1267823634,0.07835292005,-0.08520182706,-0.06416031965,-0.05832196976,-0.092383762,0.1528621133,-0.004562962125,-0.1020075415,0.108694905,-0.04952161642,-0.1018430034,0.0296309106,-0.1477475623,0.104098873,-0.06104324936,0.02398253681,-0.05298330238,-0.0008086496038,-0.1000436824,-0.1637518474,-0.1743774481,0.09928105985,-0.1178012562,0.1165596616,0.08543234052,0.04562213747,0.130892212,0.03530769415,0.01631966352,-0.1468239636,-0.0162966683,0.07184283238,0.0134573879,0.1396844477,-0.004955902133,-0.1167705157,-0.1636750638],[-0.09030096056,-0.02440665182,0.36864017,0.1028078869,-0.07895708524,0.1156962982,-0.09692784802,0.03160196592,0.122862731,-0.1110105349,0.2513915882,0.1751005979,-0.2413996252,0.100372923,0.04222832703,-0.2248941117,0.172010243,-0.1094249614,0.1640567491,0.3034668975,-0.2627307041,0.03302238501,-0.02026753596,-0.2320194091,0.202902819,0.01673854128,0.07874217336,0.2735275685,0.002957483939,-0.1606031726,-0.1553835234,0.07162188922,-0.2273006819,0.1754024139,-0.1394590371,-0.2442600897,0.05708948885,-0.08978303901,0.08135633246,-0.009703100453,-0.05306912565,0.2059858006,0.5974349115,-0.4041820334,-0.377641104,0.1700462677,-0.124274689,-0.07042019135,0.1182517,-0.006799820341,0.07623774481,0.09208936297,0.1301906883,-0.1493699448,0.03751789937,0.1081978148,0.3404443631,-0.09129796613,0.1426785432,0.03937011973,-0.1617098244,-0.03223625178,-0.1482655888,0.1066892083],[0.1601453281,0.006142404573,0.6851529602,-0.1296032035,0.06305526484,0.01863032481,0.06666548486,0.08501658672,-0.03376124775,0.1717776932,-1.134409363,-0.08890098154,-0.7135632356,-0.1341380235,-0.1705018264,0.1490994219,0.1001842238,0.7820753875,-0.1307956818,0.642959947,0.5447939229,-0.02596798232,1.010711025,-0.5120472168,-0.007957508073,-0.2071164776,-0.09000124543,-0.6471212875,-0.05568482398,-0.1347904826,0.02318460165,0.2613973522,-0.1203301061,-0.7421576489,0.01276349124,0.01307714375,0.3133659784,0.08786847002,0.0433012391,0.3439947156,0.7237736188,0.3078690388,-0.2120813104,-0.1621515317,-0.4471260582,-0.3547260731,0.3497706169,0.07096057586,0.09871446445,-0.1576917551,0.7217508833,0.0645684554,-0.3417581178,-0.09595287913,0.005791978313,0.007649866897,-0.4233680679,0.2900344587,-0.1234391914,-0.09758573892,-0.1089674511,-0.2292499473,-0.03607522169,-0.07574746048],[-0.1279202336,0.01064334555,-0.1705480056,0.03779567893,0.02987518056,-0.003277758846,0.005535092358,-0.1644609415,0.1058611256,0.09949791731,0.2166995326,0.06474242903,-0.3730370166,-0.1041792969,-0.1223900928,0.02933727,0.0008637342178,0.07981003795,0.1527790063,0.3441769717,-0.2806679536,-0.1179378186,-0.1566709269,0.1139955225,0.1655734407,-0.2462237493,0.09649276067,-0.1111884008,0.03450843078,-0.03588971727,0.1397085092,0.1102685319,-0.1160754927,-0.09763196424,-0.02837132256,-0.1602428674,-0.08328435481,-0.05479510469,-0.1356913,-0.170294264,-0.3358885514,0.3562685704,0.2091410194,-0.2618664962,-0.3874357997,-0.02787627734,-0.2075348509,0.01723916403,0.03666621336,0.08259989941,-0.01843470885,0.09281669624,-0.1696541196,0.06236596087,0.2790650194,0.2668741174,-0.06263177077,-0.2634619763,0.1138781082,0.02644830443,0.06166574242,0.03039760977,-0.02221521227,-0.03502585242],[0.1114655625,-0.1614612291,-0.08156681263,-0.1766399689,0.1009687209,0.09109603485,-0.009849990234,-0.1211178564,-0.02527052129,-0.002368852179,0.03805707856,-0.0008465205229,-0.08056601286,0.146514058,0.03052485809,-0.1288221326,0.01904836327,-0.1003518508,-0.03862581509,-0.1311162892,0.0565867473,-0.1018268913,-0.00369976822,0.07456149888,-0.1525713113,-0.02463768817,-0.09229703432,-0.1580662722,0.008103482453,0.01463709086,0.02367683418,0.0347154373,-0.05091464566,-0.007627684843,0.05062951367,-0.07289816048,-0.05680182275,-0.0157582135,0.09304713841,0.1148689783,0.1691702821,0.02010633121,-0.05902235323,0.1167402693,-0.1614472272,-0.004657953997,0.05910073542,-0.09092645601,0.02528149346,0.05487841676,-0.1768609346,-0.002247420853,-0.1412698938,-0.06807545861,0.07240818717,0.03562328563,0.01694070522,0.008793281405,0.1503209637,-0.05741906688,0.006615067708,-0.02992063709,0.04755535645,0.1368690831],[0.1494217956,-0.1706828361,-0.1257913939,0.1063983647,-0.08089215095,-0.07603428592,0.1081600264,-0.1419701185,-0.01379354178,0.02141024927,-0.1291243142,-0.1368853227,0.132687933,0.05030294062,0.06244155816,0.02301252197,0.0917250545,0.1714363857,-0.008820555657,0.1273496482,0.005083446716,-0.1495432269,-0.003073419212,-0.1632289177,0.08966428119,-0.1667873368,0.08939644408,0.1150995277,0.01069751808,-0.02631049,-0.06218199061,0.02739897624,0.1518321393,-0.01873460836,0.1519814206,-0.1627468584,-0.05359606207,0.1370410639,0.1667423902,-0.07892959203,0.1229358426,0.1489653858,-0.1641482484,0.009761045798,-0.1154298417,0.03910703123,0.07520876823,0.1436364546,0.1261018814,-0.05433386159,0.02502828583,0.007986952179,0.1551737907,0.09663281283,-0.04949057627,0.12081881,0.0068596293,-0.1467546492,-0.1616971211,-0.09500590612,0.01122799831,0.1709555737,0.02410905869,-0.1642597471],[-0.09463255254,0.02025841329,-0.110094642,-0.02435554794,0.07509821528,0.04728376595,-0.09826698922,0.1314606859,-0.1681129685,-0.10788685,-0.1733172159,0.03464378531,-0.1603435686,0.1618298385,0.1325758079,-0.121363059,-0.06553941688,0.1234876656,0.1663235725,-0.110679393,0.1245626075,0.1077435478,0.05084430765,-0.1176429304,-0.1476935138,-0.1451013875,0.008551756005,-0.08382210885,0.1219614896,0.08497160105,0.09000020081,0.1321223652,-0.05151569429,0.1770485756,-0.06770946295,0.04236685451,-0.02249562422,-0.07276797529,-0.108238456,-0.09493876736,-0.1304702021,0.07499576557,0.001467968503,0.08794013539,0.09750410807,0.09851793537,0.1088864406,0.02155289299,-0.09966849574,0.1410868646,0.1524738131,0.06558597582,-0.1684468209,-0.04056121041,-0.1070348,-0.02558920023,0.148354283,-0.1665657306,-0.05271844418,0.04530512188,-0.138012405,0.1625770839,-0.167277499,-0.07630787429],[-0.0210799688,-0.1292830439,-0.0947573832,-0.1601185206,0.05276260617,-0.08530417442,0.07749770748,-0.1695481369,0.05399844545,0.08540128127,-0.1612592139,-0.1268916472,-0.06884294547,0.1399496533,-0.03947427233,-0.08550135862,-0.0767078864,0.152818899,-0.1640261408,0.1468849743,0.1102022756,-0.152392857,0.1144941485,0.1522552636,0.0992948441,0.1177665988,0.06991533928,-0.03583863954,0.1567271642,0.02323311744,-0.1375958885,-0.1222412236,0.06344938693,-0.1072172341,-0.06979921895,0.04214824389,-0.005333934542,0.08984280506,0.1455669821,0.1524033895,-0.1187629414,0.1316016885,-0.17785271,-0.08852605168,-0.06283627358,-0.1704695214,-0.1473458259,-0.1687617055,0.04899570886,-0.1634672766,-0.06974346896,-0.1250435484,0.1406957627,-0.1494017951,-0.02231950179,-0.04966227293,-0.08446022506,-0.0853141162,-0.09268768111,0.09487266413,0.02146711493,-0.06437181485,-0.1494986058,-0.1460113673],[0.04531768675,0.1384914976,-0.1209190558,-0.1439874727,0.03297217692,0.09006489277,0.1013227749,0.01022600384,-0.1585681191,-0.1552329396,0.3005389106,0.1511331379,-0.5261930793,0.02547633192,0.04998275744,0.5989459084,0.09190966939,-0.01825702026,-0.03679507922,0.4872330687,-0.3232340722,0.1651296539,-0.2199926941,-0.1478576679,0.6560783417,0.3698405593,-0.05301586148,-0.08969114663,0.005652416363,-0.1260823773,-0.06134473532,0.1831583361,0.1626187587,0.7735909467,0.05322293636,-0.2322825431,0.03863986268,-0.16680895,-0.02495718713,0.04805851472,-0.130311062,0.8680225447,-0.1592501943,0.3819716161,-0.7717409879,-0.2606388012,0.06092840325,0.07477705975,0.04713120604,0.4186551739,-0.1562787904,0.1364335274,0.02829325113,-0.1155422669,0.3618784164,0.4407004996,0.2151076939,0.2883083083,-0.05681114634,0.0573075888,0.0298821908,-0.1278560622,-0.1723044823,0.1442909535],[0.06605432115,0.1467197949,-0.6111329043,-0.1448025897,0.1490300909,-0.1041418942,-0.1141451063,0.08194192407,-0.08991915868,0.1138286354,-0.1373081339,-0.0337902,1.091861132,-0.02771167383,-0.07151560326,0.09438385587,0.03392470311,-0.1940764634,0.1076201419,-1.103863447,0.6058964372,0.00442166498,0.1495201862,0.4785978601,-0.1588994965,0.450758772,0.10442987,-0.153330565,0.06716708044,0.09451191937,0.08647443802,-0.2063609412,0.349517141,-0.294101764,-0.1263226267,0.2437038361,-0.1016646326,-0.09023422053,0.1025236642,0.3669337032,0.5397860791,-0.7388482201,-0.8792530879,1.259349148,0.6915156188,0.1225246382,0.8286523758,-0.09937023978,0.02187677769,-0.04030612098,-0.0261236493,0.09409698019,-0.05003505225,0.1668132397,0.2045377093,-0.1993299867,-0.4238938795,0.4023592771,-0.1728562685,0.1527718826,0.1493483504,-0.1038034851,-0.1616136629,-0.007654382757],[-0.03555335002,0.1537069699,0.006746066162,0.06559477068,-0.07816574244,0.1443907969,0.1045813726,-0.05261777166,0.1232368052,-0.1147450471,0.3484104109,0.1267102526,0.2169741522,0.04425809917,-0.1329823656,0.02102917667,-0.105878132,0.1550419541,-0.05155587039,-0.0008437207854,-0.07665596911,0.07530647224,0.09565571324,0.3586334814,-0.06639404788,0.145811491,0.09782874448,0.3396422863,-0.09392017047,0.1265284768,-0.2261538816,0.1081858376,-0.00177637871,-0.07204630906,-0.07857989548,0.06342598788,0.1891022493,-0.1402351257,0.155572198,0.09386274596,-0.2467221864,0.0154646076,0.2874326735,-0.01164668104,0.109159947,0.3207265092,-0.1531838534,0.1723368421,-0.05703387959,-0.1332682292,0.107053142,0.1179582119,0.002196344777,-0.009576391167,0.1895400244,-0.02791648797,-0.005194891607,0.01393116738,-0.08063260687,-0.06698715487,-0.1954428613,0.1629230564,-0.1352398197,0.1734850236],[-0.1162043799,0.1399160624,-0.0516215158,0.07439199594,-0.05393870064,0.01294980418,0.09060793549,-0.1424197016,0.04822791182,-0.01213012505,-0.3324382715,0.1719050716,0.4343703804,-0.153102608,0.03621414247,0.3822713827,0.05881112576,0.3318154698,0.2191065058,-0.4092580063,0.5121213914,-0.1116667379,0.3372914738,0.5078788036,-0.2818435351,-0.04259783445,-0.01780427095,-0.3852591538,0.1173271768,0.04578265753,0.01486759784,-0.08686673722,0.183781634,-0.1946443958,0.02081177079,0.2498398219,0.02368689068,0.03239498604,0.04949884741,0.8249098896,0.5319166967,-0.1638942547,-0.7743394421,0.7322484496,0.4762354791,0.1927555533,0.7036575314,-0.1518019862,-0.1178206857,0.5709640904,0.6481697788,-0.05570654527,-0.2248670223,-0.07865970087,0.5021479885,-0.1117102001,-0.5647686836,0.5609198533,-0.06162179405,0.09055806786,-0.1751931301,-0.02568898085,-0.08281718273,-0.174331441],[0.1727147463,0.09104365175,-0.03933540538,0.1302944505,0.002862316537,-0.081710595,-0.1029492494,-0.1503605556,-0.124006945,0.1136018216,-0.1051743501,-0.0028611682,0.1721563526,0.09956752769,0.01229214871,0.03314888746,0.07080935099,-0.04277898005,0.1503142487,-0.1561453027,0.1715809382,-0.1133695264,-0.07814130023,-0.06365321271,-0.1546780195,0.02534941278,0.1756663333,-0.02609053564,-0.08275991521,0.1357174748,0.0760389364,0.1672565541,-0.04644318689,-0.1094916495,0.1021520795,-0.01112467573,-0.03457638739,-0.1688238747,0.02211239257,0.1406666046,0.02271533797,0.02456227494,-0.1084762956,-0.03922284498,-0.150262046,-0.04508566094,-0.1766939946,0.0194675718,-0.0604277544,0.08200601378,-0.1570279784,0.07353305518,0.08457681909,-0.1034485753,-0.1691356839,0.1093075775,-0.007591743321,-0.152458888,0.1081957747,0.1542895991,-0.08060023298,0.09991798154,0.1091760549,-0.08294772453],[-0.1392138101,-0.09565420894,-0.3876911146,0.1048713069,0.1741921435,-0.1533598709,-0.1090514204,0.06285653043,0.1118853227,-0.1721657892,0.5884287433,-0.02975803208,0.4540475729,0.13785824,-0.09016786197,0.05983333437,0.0252667121,-0.0617961331,-0.2566137372,-0.04999485063,-0.2966550658,-0.1742708141,-0.1426043819,0.1034095018,0.1686606282,0.3250044713,0.1732437629,0.3651353022,-0.09961395731,0.04459948881,-0.0577448724,0.03944618049,0.4063233316,0.6342795854,-0.07678573015,0.04484763213,-0.1271624919,-0.1047886062,0.02205212356,-0.319746262,-0.3872956599,-0.04731839407,0.3631078451,0.2100180402,0.1769851795,0.2904660047,0.0128630897,0.03132671193,0.1144856693,-0.3239984762,-0.2819703154,0.1167543961,0.3133219621,-0.07961140667,-0.00731063114,-0.08934600883,0.557518782,0.07691958411,0.04522727254,-0.1722057491,-0.1162418241,0.1545864227,-0.01367721071,-0.1094908614],[-0.03484249815,0.07511869816,0.5991696039,-0.1561413551,0.0378672749,-0.03556002487,-0.0209246789,-0.046721377,0.1341466379,0.1246280474,0.2677996832,-0.01770012378,-0.7714415567,0.007750560055,-0.01840667701,0.1000713433,-0.1213563063,0.4684493165,0.1491351772,0.4550900119,-0.3431970899,0.1045124414,-0.03616882535,0.01069551918,-0.2709320767,-0.4151494398,0.1237261069,0.01328081621,0.02667773796,0.01748117732,-0.2208751711,0.3211173043,0.03229530886,-0.07023446569,-0.06700502217,-0.1845161255,0.4230058175,0.09356546809,0.1702361323,0.1801326788,-0.1805570577,0.507467915,0.8408794738,-0.72389823,-0.09977825022,0.2623142129,-0.1708796233,-0.009307808729,0.004983307298,-0.1661000274,0.5504752118,0.0618094012,0.1337736383,-0.0491995139,0.3235507941,-0.1668801477,0.189913677,-0.2676284372,0.02402412406,-0.02706668629,-0.1988893384,-0.05673605854,0.1032945017,-0.0601112347],[0.05219943801,-0.06670793727,0.05397809152,-0.03028044523,-0.1020211131,-0.01870004426,0.03970169524,-0.0381450791,-0.02831908137,-0.1491415714,-0.2959262883,-0.0833909668,0.7239650761,-0.09018237151,-0.1044376346,-0.2192359207,-0.1060415894,-0.2361272948,0.3304694052,-0.7736298213,0.6268836525,0.004172958403,-0.06941511585,0.2991766119,-0.4868119341,0.01777903093,-0.04083204195,-0.11167289,-0.1071086919,0.02052612332,0.2948841265,-0.07954783401,-0.1162261928,-0.5884574604,-0.1048004728,0.5205536371,-0.01751856757,0.02447930048,-0.08406339096,0.2287629009,0.4215008301,-0.9614067362,-0.3392131079,0.07842799367,1.262689497,0.186752352,0.3287761915,-0.04546891458,0.1642957558,-0.4000594912,0.03079517141,-0.115543352,-0.06995707755,-0.07726072843,-0.1490972587,-0.5525145901,-0.1481155891,0.2524299856,0.05029019285,0.002405664817,-0.1621341103,0.3002907278,-0.1076864231,0.1279314906],[-0.1024272982,0.1427463958,-0.155840729,-0.09759100497,-0.162158594,-0.09380413779,-0.1595556733,0.04625580546,-0.136456084,0.07286572651,-0.1562787469,-0.09574171156,-0.08595552417,-0.1518794796,0.04255461131,-0.1388941416,0.1568328449,-0.1721398227,0.1119428092,-0.1302085958,-0.05844877975,0.07132178735,-0.1269307624,0.1497104907,0.1711608477,-0.1528269524,0.1740664621,-0.008131710469,0.1509658029,0.09030763952,-0.1752253414,0.04304076088,-0.08179463582,-0.03780300804,-0.1580312865,-0.1655320961,0.03738753724,0.01310807745,-0.0600870159,0.08132319829,-0.1710244728,0.03271909761,-0.1558639633,0.06168152173,-0.09775867682,-0.03270014322,0.1339820038,0.143956216,-0.05059304331,0.01240763914,0.02234951518,-0.1592815702,-0.1717029836,-0.1542545227,0.009603575062,0.003027609727,0.09290046293,-0.1287745244,-0.09197515736,0.1674450538,-0.09109390462,0.0253527325,0.07206669783,-0.04998702826],[0.07131437264,-0.02254281248,0.04668743072,0.1286241792,-0.1706248884,0.03131001206,0.0004950164647,-0.03305192781,0.06472388854,-0.1534356102,-0.4868079998,0.08560881794,0.3566699827,-0.01183558885,0.07069247218,0.3662966982,-0.1100322609,-0.1814164753,0.01167584394,-0.5327336694,0.5403439491,0.1608329241,0.3913142998,-0.0203289136,0.1448180203,0.09782801896,-0.08165586369,-0.4572511561,-0.07163167834,-0.05075537436,0.003498792764,-0.1356889672,0.2797910824,-0.03547039415,0.1671438444,0.1851033048,-0.05259180831,-0.1714188707,0.1378044091,0.4979729873,0.4905893637,-0.2514143728,-0.8392964092,0.951839333,0.3261321734,-0.07524961691,0.6567203388,-0.07204064351,-0.02269030126,0.3850427881,0.3830846431,-0.1212041507,-0.3452002691,-0.06649146595,0.14355477,0.1245476823,-0.4304319331,0.4294398956,0.1760307623,-0.009565992256,0.03778664721,-0.2584671954,-0.1381351626,-0.0612974324],[0.03497920326,0.0604163871,0.1142941166,0.1562859904,-0.002202737949,0.1459083365,-0.1309393322,-0.1153900855,-0.107694163,-0.05239886798,-0.06786006408,-0.164220014,0.02078827487,0.06351294833,-0.086023104,-0.1817561565,0.06309924475,0.1493130175,-0.1711774889,0.03100558141,0.01666184205,-0.05993213693,0.1571980311,-0.008204937689,-0.0009816770976,-0.127828418,0.1620706926,0.05961899507,-0.170672942,-0.0294062939,-0.02162357925,-0.1845474269,-0.160040023,-0.1746955528,-0.06052510243,-0.09281868226,0.1223591681,0.1498859546,0.1069387897,-0.01455687325,0.004383920124,0.03597747331,0.1340514353,-0.1625566499,0.1370536394,-0.1606706204,-0.146408132,-0.12402281,-0.0003838585968,0.1463438374,0.0713480705,-0.05419559935,0.157692704,-0.008724459796,0.07369502744,-0.0819434638,0.04607538617,-0.09114190168,-0.03255892246,-0.08208843853,0.1605464332,-0.02260156806,-0.1214938432,0.09848882619],[0.142456624,-0.05093412672,0.1725734663,0.0172163234,-0.05273864454,0.1694636828,-0.1239930698,0.08998998547,-0.1165540099,0.003897610078,-0.1412905821,0.1627833873,-0.0464221492,0.1389810788,0.0435041775,-0.03420664379,-0.1528641462,0.1093168073,-0.1087389416,-0.1413283448,0.0432589431,-0.1406733318,-0.1750077053,0.02548437012,-0.07608989243,-0.1554364426,0.03515830695,0.05477917713,0.005668181733,0.01225053297,0.0243404136,-0.143080284,-0.01596884254,-0.1119988139,-0.1071529173,0.03457381495,-0.126298605,0.0387568281,0.1054925299,0.006929153867,0.09464847697,-0.1626552225,-0.1144182847,-0.004863627535,-0.044210573,0.1041518694,0.1413334894,0.1007039133,0.05430837493,-0.175128974,-0.1060009876,-0.1254791634,-0.08985428579,-0.1569421936,-0.1215468122,0.1063532605,-0.05270311672,-0.02968759909,-0.08347047946,-0.07407889721,-0.04247131942,-0.001995551615,-0.09245489156,0.0479721524],[0.1563338918,-0.1749869934,0.001975534496,-0.1112000306,0.06935730085,-0.1678463328,-0.08468473412,-0.01484427901,-0.1729524179,0.06110859986,-0.05920012652,0.02913747027,0.1505216482,0.006632617532,-0.1070817522,-0.00346506652,-0.1199932367,0.111231089,-0.1763058931,0.004020460404,-0.0585251747,-0.02695711831,0.1235506971,-0.03580334422,-0.167228697,-0.03672948253,-0.08949976362,0.08016568942,-0.05454938774,0.002794731761,-0.127376222,-0.08013266671,0.1065763644,0.01438625818,0.01557917599,-0.04600027488,-0.07460036041,0.07575682466,-0.1454300829,0.04537801239,0.08633245545,0.08561998669,-0.1293034408,0.02581380964,0.0790346282,0.02609241282,0.1326083076,0.117440961,-0.09938254221,0.09677128235,-0.1308623558,0.02307428688,-0.00246635381,0.08030134334,-0.0702793682,0.006514314785,-0.1217609952,-0.1389978166,-0.1207480288,-0.07068991192,0.09843012617,0.01192627175,-0.1370715866,0.001029545682],[0.01170812658,-0.1558441551,0.09494794413,-0.04064130523,0.1678301368,0.115695218,-0.1056414014,-0.01897336608,0.0798844766,-0.04623252986,0.08664214977,0.03263153391,-0.07296935267,-0.07903980782,0.06193872287,-0.02343253016,0.007438905183,-0.03037976614,0.003478482154,0.01194826333,-0.03990860426,0.02632618641,0.09773172375,-0.1528699981,-0.1016519161,-0.1749001192,-0.1010159749,-0.1161444498,0.01972815819,0.1020365243,0.1237426563,-0.1061251036,0.04591487796,0.03519449151,-0.1626710122,0.05965379892,0.09783800552,-0.00352708248,0.1263875195,-0.03578645871,0.0286867968,0.05283290376,0.1075171332,-0.1342443702,0.1670119533,0.06760093713,-0.09593245429,0.1340555079,-0.02415984416,0.07362164794,0.09471436124,-0.04818253975,-0.1722784548,0.01424908352,-0.1364976032,0.1569848555,-0.08703503592,0.07440524091,-0.1253069316,0.1587652756,0.03957892413,-0.1698595495,0.138075171,0.1546246476],[0.008144903586,0.02005851655,0.1153517129,0.05590261372,-0.09314549088,-0.1729400604,0.05670097382,-0.1658107076,0.02022514642,-0.1440418684,0.5126444404,0.06876938194,0.05038392866,0.05666952601,-0.1363383173,-0.03852757253,0.1048968689,-0.9820697736,0.5577543832,-0.3110402987,-0.1552107948,-0.004869574028,-0.9296440282,-0.105755687,-0.1117281884,-0.636188147,-0.04049676508,-0.2533654564,-0.05542228786,0.1443989392,0.09213287737,-0.0851873745,-0.05611630203,0.4513919863,0.0342959528,-0.2106674634,-0.130433178,0.02504207384,0.05042430346,0.03244991558,0.05180839959,0.539575932,-0.3988933058,0.1094254975,0.2197407487,-0.1890398627,-0.3856029908,0.04192932708,0.0326244022,0.7455943922,0.009505493921,-0.07854741014,-0.4498956998,-0.1626332967,0.6672889134,-0.184011254,-0.3869029167,-0.1114207689,-0.1231686369,-0.1218692338,0.0390964579,0.09175356403,0.06596283384,0.05260290254],[-0.05746853148,-0.01907811401,0.2311291766,0.1177945181,-0.1544031221,0.07466025141,0.1004273912,-0.09692190021,0.06805760432,-0.06652029289,0.3370001542,-0.08429324439,0.007977667325,-0.07960738115,0.01723674766,-0.2581727586,0.1264781789,-1.027942893,0.4601495761,-0.2323438534,0.08057655527,0.000311847578,-1.005591779,0.03146886028,0.1383322654,-0.2084660422,-0.165805637,-0.08699768987,-0.02969819801,-0.004483158056,0.1176002266,-0.03189871565,-0.5475654115,0.2100177088,0.02555066563,-0.313499116,-0.1348577988,-0.03877225878,0.01955575387,0.03808830435,0.387841997,0.4648147796,-0.2266296223,0.09985268986,0.077923866,-0.08696361938,-0.3371551216,-0.1423622459,-0.06218588615,0.2346352008,-0.04582571821,0.1267594921,-0.498601863,0.1616296105,0.4488467933,0.2362654655,-0.3026624312,-0.4795700576,0.1269119662,0.001092098026,0.06564185793,0.1640370453,0.1084207796,-0.1042359329],[0.01210696303,-0.05835669021,-0.1061245341,0.007772005557,0.07161864852,-0.01627041312,0.01671516444,-0.01152625766,-0.101981846,0.03987335205,0.1368573153,0.1165169209,0.144733941,-0.05446253526,0.006585402689,-0.07518296898,-0.1049715856,0.1495150516,0.01682377962,-0.05823422285,-0.1103128295,0.1544640195,-0.04088330734,-0.1468131047,-0.0872342421,0.07474729356,0.1533028882,-0.04443994214,0.01109247027,-0.1583130395,-0.1071136775,0.1475754552,-0.134407168,-0.04479273127,-0.0337035097,0.13830037,-0.0176300125,0.1184810552,-0.03720419911,0.1273348358,0.009849797215,0.1164695622,0.04562325951,-0.01609650544,-0.1593846875,-0.1592684642,0.1430319133,0.1114435032,0.04592561339,0.0180052696,-0.07447137578,0.08713258423,-0.05260209814,-0.01309665664,-0.1731305652,0.03316156121,0.1520010312,-0.1451772501,-0.08592173096,0.1650642991,0.007203394027,-0.1180931075,0.1541579674,-0.1204455019],[-0.03117167919,0.1689539556,0.02465884929,0.01250924828,0.1560176697,0.04214497917,0.1209185403,-0.0466759455,0.013760808,0.06316349632,0.1492125094,-0.04964467633,-0.1336513521,0.1495196843,-0.160672785,-0.1738761348,0.1112515905,-0.1946541274,0.05596529924,0.3116181572,-0.02585021254,-0.01608093126,-0.03815319813,0.06844556443,0.01449419611,0.09974208218,0.1608251467,0.03521352291,0.02756377172,-0.02549180294,-0.09969502419,-0.06501287629,0.07032729589,0.05001350001,-0.1570966674,-0.1858766979,-0.03936536139,-0.04042979407,0.1322025288,-0.276056857,-0.06438889313,0.2369743667,-0.08028742642,0.01828306821,-0.1259329221,0.146968749,-0.1507096182,-0.1691277122,-0.1589823528,-0.1526715599,-0.1661414682,-0.03465599094,-0.06772120152,0.1610707667,0.002970094503,0.2089953347,0.01779819013,-0.2445911482,-0.1164451624,-0.1294125724,0.08840463316,-0.04425644177,0.1024746589,-0.1375240844],[-0.06023488861,-0.01618891807,-0.01331344102,0.1068659272,0.1298396564,0.1642956346,0.1231768411,-0.02509531075,-0.0903431438,0.08475905103,-0.08168145218,0.1132137337,-0.09077295554,0.1336930656,-0.1734512238,0.06972188223,-4.341067776E-05,0.1504002973,-0.06538807146,0.006312444778,-0.08185247333,0.1583138192,0.1544611656,0.1508921031,-0.1495470551,-0.1453973683,0.05749948554,-0.07052035962,-0.100761327,0.08483840581,-0.05477915966,-0.09361234073,-0.1265117251,-0.1432805075,-0.05236640209,-0.1101528543,-0.1128124698,0.001831030239,-0.1221906733,-0.1497907382,-0.1061078129,0.07749709554,-0.1229807499,0.05938755601,0.06290839356,0.02770690696,0.07074952527,0.01416911514,-0.1614209571,-0.01387636849,0.04282430869,0.08169705944,-0.1241915846,-0.08243475491,0.115877275,-0.0421231843,0.00260249262,0.00775526159,0.07838700368,0.09506888059,-0.07005033499,0.01673935925,-0.1011106791,0.001595145688],[-0.03770175073,-0.164587707,0.04086629705,-0.1235718728,0.009282772348,0.1117725362,0.006539707273,0.1749022544,0.09859014162,-0.09824922376,0.6330187906,0.01856416431,-0.01853281736,-0.082039847,-0.08679009845,0.04983605783,-0.03959118374,-0.1177091619,-0.1070178935,0.4090808374,-0.7409285007,0.04076374232,-0.3394441019,0.3196878821,0.2017736109,0.2073978194,0.06498322172,0.5182347516,0.1005512506,-0.0404828586,-0.02722656633,0.1155654652,0.1775758285,0.619922327,-0.07657042446,-0.08955596687,0.2269328582,0.02115713704,-0.1718903525,-0.328528954,-0.3730034621,0.4196210217,0.7069600958,-0.1254492442,0.06007040844,0.169471211,-0.2761917974,-0.09139043948,-0.08048573827,-0.2190848803,-0.1214370078,-0.1133109166,0.1891005995,-0.01387435046,0.1276451477,0.1692281809,0.6469647882,-0.1181035308,0.1376427798,0.01987716195,-0.1697610629,0.1862107263,-0.1020951628,-0.03770369508],[-0.01745909616,0.0556195652,-0.1614545342,-0.1282420362,0.1713072728,0.03710528984,0.02999271215,0.1160283745,-0.1383326677,-0.1662120941,0.1099158562,-0.01185110235,0.05774156814,-0.1176811197,0.150173972,0.1693871545,-0.0429724061,-0.02040303411,-0.0383190187,0.01975579364,-0.1751428663,0.0367901707,-0.0465521793,-0.1594321076,-0.08659456509,0.00214008285,0.07074742146,-0.1391947359,0.06029105258,-0.01499081916,-0.1431848036,-0.1455651428,-0.02535845514,0.02115954943,-0.01158137668,-0.07309399348,-0.09195475953,-0.01615664264,-0.08592101693,0.05923243519,0.05069144299,0.01892323309,-0.1516100571,-0.08437865295,0.05330850166,0.1529230057,-0.1360207323,0.09981500526,0.1336284571,0.1454116827,-0.113811071,0.06719234862,-0.01275415566,0.05508637826,-0.0390922613,0.1227011364,-0.07445240533,0.1750209971,0.1353836208,-0.007364491135,0.1432082512,-0.007466777163,-0.1210393734,0.05343484676],[0.1537707137,0.07839351981,-0.7124782062,-0.1399304837,0.07067695226,0.04649108876,0.08445167802,0.1499609318,-0.1112587125,0.07988848827,0.691045047,-0.01699791744,1.125990084,-0.1387363795,-0.0361809189,-0.6513783662,-0.03875930916,-0.1757521857,-0.5332300931,-0.4949078113,-0.5022019228,-0.03362176588,-0.2783093615,0.4997468692,-0.1323990891,0.5521665703,-0.1752655566,0.7021837481,0.02632006992,0.0982201695,0.2640811405,-0.3300445362,0.1517084874,-0.01045444038,-0.06158651352,0.4628464043,0.03327540635,-0.1729685291,-0.1476386423,-0.6342956987,-0.8025603189,-1.389162281,0.5193464534,0.2524652316,1.001587726,0.8102791745,-0.1178677897,-0.1126452666,0.03438672641,-0.9048828148,-0.9681388185,0.1722021475,0.5077199669,-0.03603342601,-0.8269477502,-0.2544242614,0.6149811183,-0.2694016114,0.1534748266,-0.1487676332,0.0822798637,0.1961267667,-0.05205219536,-0.03270218668],[0.163064933,0.08757916532,-0.06503432251,-0.13659518,0.0996268293,-0.01108467162,-0.0253312577,-0.04256747531,0.1185710585,0.1702293034,-0.3341821405,-0.1675057187,0.3145729131,0.135930122,-0.1666100157,-0.07411066133,-0.06809111864,0.3296883665,0.2378559959,-0.4270144786,0.5570828395,0.09740234662,0.3268045171,0.3028246902,-0.4799585825,0.1837852686,0.1172997472,-0.2180222675,-0.1497268459,-0.1756477044,0.2270484496,0.04336991413,0.06644355154,-0.698157439,0.09857115463,0.4127018951,0.2549883646,-0.1061992018,-0.03549540058,0.2095981559,0.2564264719,-0.3922099148,-0.2338798765,-0.04693003591,0.5780480217,-0.138985435,0.3016956436,-0.1015494212,-0.09290898302,-0.08388260404,0.2385636454,0.1076002401,0.02490168555,-0.05581736431,-0.04121950157,-0.280882612,-0.09847417707,-0.02369553283,-0.1536835456,0.1718291271,-0.01242095876,0.2865400688,-0.06967751021,0.1174420676],[-0.04862686286,0.1448434878,-0.2093507042,0.1071040111,-0.1394177279,-0.1651549298,-0.05184180026,-0.1386686122,-0.02712488944,-0.0005904441505,-0.0370166269,0.1696397534,0.3127131377,0.05130348293,-0.1108900494,0.03665321188,-0.1181142138,0.3111333505,-0.1760600445,-0.1878951572,0.0789683634,0.1113338735,0.4410541882,0.1518256774,-0.1673842565,0.1005709089,-0.1194562207,0.1699496516,-0.128889372,-0.03054783241,-0.003944656471,-0.09330938919,0.07613031988,-0.3291304255,0.1436781057,0.3255425644,-0.07074409166,0.1155846001,-0.1389083885,0.01310181727,-0.02318576011,-0.3068574806,-0.1136342799,0.1319796911,0.2258702529,0.262459525,0.236248597,-0.1100790434,0.1320699702,-0.1685299893,0.1830464436,-0.1704568919,0.09690075109,0.1509763464,-0.1166610843,-0.1465708858,-0.1937005623,0.2007468188,-0.02680007948,0.004450399088,0.1449958308,-0.03876768576,0.1674004346,-0.1733537523],[-0.1672489517,0.01639634164,0.1230587539,-0.06919445909,0.0844020725,-0.07586440482,-0.005813308809,-0.05692211866,0.004204166333,-0.1104848826,-0.1802957621,0.02381340793,-0.03576297037,0.0008719528532,-0.1432384868,0.02412228633,-0.1657594557,0.2148927137,0.1931136417,0.1005434368,0.05767605626,-0.009240681805,0.1601271546,0.02466013489,-0.0334278131,-0.09629365518,0.1138577712,0.06150953449,-0.03439196622,0.03341790767,-0.04058201901,0.146362243,0.04978390291,-0.1493871007,-0.07022618348,0.1995529002,-0.07664900743,-0.08569090748,-0.01770442062,0.09081396274,0.1454043724,-0.06613309723,0.11337625,-0.2220206511,0.2847140544,-0.1240760415,-0.1576444308,0.02702132673,-0.009966259395,0.05883396205,0.07315848217,0.1404551634,0.08641152763,-0.1056282585,-0.0537103484,-0.06829119055,0.04910989258,-0.1531468269,0.03025308155,-0.04246007428,-0.0505628325,0.1560846538,0.1542465923,0.147562954],[0.1247042992,-0.1009730737,-0.01601425049,-0.1546934426,-0.105678559,-0.1140621325,-0.0088681575,0.09670814703,0.008327243365,-0.05229101017,0.7506959206,-0.1370265471,-0.1417790183,0.07020255194,0.0285343436,0.3534831006,-0.09012176352,-0.1655426345,-0.407686304,0.5614540047,-0.8397138329,-0.02251050742,-0.2789818217,-0.1835274154,0.8662293815,0.2992561307,-0.07312439654,0.2267843889,0.06119297465,-0.1520210416,-0.3054243782,-0.07810863279,0.2268903949,0.946248075,-0.04568185643,-0.2872770239,-0.1782809652,-0.158652733,-0.04407680961,-0.5029257458,-0.5715093569,0.8343271485,0.3847371832,-0.08339418742,-0.8198492444,-0.1271842623,-0.1565941481,0.1505221856,0.004802149113,0.1868290143,-0.3733298417,-0.09978192509,0.3554975929,-0.06445615842,0.1877659075,0.371215812,0.7247639515,-0.05317547039,-0.1388582081,-0.01668395009,0.2175423497,-0.1580710267,-0.1409012545,-0.01642841029],[-0.09418130039,0.1222452159,-0.01545575922,-0.04268569722,-0.06089228693,0.1402088516,0.01012789602,-0.1082457258,0.130913254,0.1390329498,-0.07254097501,-0.03351695968,-0.4427881772,0.1763304754,-0.1124988677,0.2338323019,-0.1191193531,-0.1792499349,-0.2444835201,0.6518719654,-0.1323822392,0.1438850855,-0.09613891308,-0.4421022359,0.7777698715,0.7461761704,0.06963633142,0.05943383883,0.1569811677,0.1493838358,0.04614175926,0.2133420518,-0.09519211575,0.6499369155,0.174965286,-0.238191986,0.169045045,-0.1039662538,0.03463777724,-0.4201189574,-0.1402246111,0.4441720189,0.2598110476,0.2757934249,-1.049436207,-0.2264101581,0.004190612831,0.172688771,-0.1040526995,-0.2229273698,-0.5030392387,0.005932150903,0.1159394564,-0.06021018447,-0.2188596735,0.4831480978,0.3804569357,-0.1239139062,0.03356313023,-0.04477231921,0.01296219972,0.0174236959,-0.08845120091,0.1583061135],[-0.008284364215,-0.03386862656,0.03832957706,-0.1264180625,-0.1754115059,0.07780425435,0.1468515868,0.161623596,0.0952690312,0.1529883262,0.0248784811,0.17473994,0.3192971027,0.04812477058,-0.09942293272,-0.1224320789,0.03558018884,0.0009494386132,0.04391884429,-0.3090633541,0.139740925,0.1391014581,-0.07487440453,0.1266716456,-0.1724984636,-0.04145589868,-0.1716033163,0.02398443872,0.03954430021,-0.09736659885,-0.06956294894,-0.01605484815,0.1976990164,-0.1038190611,-0.07567208002,0.1331461303,0.003144820928,-0.1020587894,0.1713235816,0.1065339564,0.03370121374,-0.3135543456,-0.06585845264,0.3160014545,0.5435117732,0.2333820386,0.1571196232,0.109952119,-0.1337441168,-0.09155119236,0.2260055192,-0.003151735489,-0.03761000481,0.09248431845,-0.0226894075,-0.1568399657,-0.1560017869,0.04725254466,0.0850566231,-0.05811309179,0.08528972217,-0.01364008434,-0.05440041048,0.01585893475],[0.008080041891,0.1018221748,-0.06961867601,-0.1203019193,-0.05297984469,0.04054056817,0.1007477007,-0.03913771707,0.07917736937,-0.1492674562,0.1583284636,-0.07064006949,-0.1251150521,-0.1231006381,-0.05404031439,0.1335643244,0.1417948458,-0.10477874,-0.07993962311,-0.03488311668,-0.0170140908,0.1507259034,-0.02967836893,0.1518742975,-0.1468055828,0.07171374234,-0.08546165283,-0.1491120154,-0.01033871719,0.0526599781,0.09906556136,-0.1694692237,0.1719889127,-0.105195815,-0.04112287759,-0.1267221042,-0.09864363865,0.03798535473,-0.01384473159,0.002492010375,-0.0266172728,-0.04121479098,0.09444759044,-0.1349633001,0.1109325502,-0.1715556403,-0.02227077022,-0.1081779053,-0.1149393638,0.128268994,-0.02313124225,0.0006329201299,-0.08985513614,0.1572594015,-0.1439036697,0.03413083379,-0.04527615152,-0.04471627822,-0.1502730317,0.05208310826,-0.0507744743,0.07308302085,0.1479776954,-0.150259304],[-0.07155632222,0.1510209919,-0.2618464875,0.1568574582,0.0947989348,-0.1040949055,0.05543126774,-0.07296720427,0.08584268685,0.08912101493,0.3163784569,-0.1525759951,0.31122248,-0.07149176411,-0.135834948,-0.4160402727,-0.08279218274,-0.01918882533,-0.07553655244,-0.1156751155,-0.2228004644,-0.07834405406,0.1173452955,0.113290168,-0.2830246926,0.2254106984,0.09533074258,0.5177518268,0.01217555541,0.1108488554,-0.07149310541,0.008100967733,0.07208334333,-0.1488942536,0.1133697174,0.362529004,0.1033502339,-0.002351533117,-0.02620014478,0.07505846681,-0.4515787241,-0.6851902379,0.3750177041,-0.04996113379,0.613873618,0.2295757311,-0.009820511524,-0.1505610827,-0.08565802553,-0.5535748034,-0.2332887565,-0.07349072674,0.423218952,-0.06696798398,-0.1999668216,-0.4229432546,0.1483346576,-0.09097727232,0.1181496035,0.1700526462,-0.08434896598,0.2131726774,0.09232779987,0.1517705267],[0.04107857714,-0.08534224554,-0.2071382815,-0.01165188622,-0.00808478621,-0.09574650626,-0.04632328438,0.09633604568,0.04891639722,0.1480669145,0.2330863948,-0.150821437,0.3225286849,-0.07219058487,-0.1507957341,-0.353926014,-0.05310623223,-0.005529032797,-0.192056908,-0.1185595602,-0.3025576454,0.1267572114,0.0513227315,-0.03539473288,0.1938229915,0.3062114234,0.08282986943,0.324509949,0.05666549929,-0.01947609567,0.05155114194,-0.1026677407,0.0893031079,0.2362446244,0.1282746155,0.1237060473,-0.1078440651,0.1662811024,0.0343003988,-0.4403471568,-0.3016153958,-0.312107987,0.2837050581,0.1588565112,0.3220284638,0.2807501756,-0.05931931269,0.126048969,-0.1065627593,-0.2143508483,-0.3485095368,0.08501261257,0.1574306211,-0.09417698051,-0.3147480451,0.05598729339,0.2921244689,-0.07717895881,0.04792078082,0.06210992354,0.01538058597,0.2140139392,-0.1367162083,-0.1083842024],[-0.0351326876,-0.1749245356,0.05121294098,0.06706931077,-0.02368850508,-0.04810983446,0.05797969521,-0.04261063928,-0.1419619641,0.02046616947,0.1521260762,0.1142110144,-0.08236014504,-0.1607631365,-0.08992526059,-0.1722094803,-0.07011672894,0.1043669689,-0.103888323,0.1397261047,0.1048859986,0.1035685771,-0.1210188113,-0.1184931709,-0.04023720767,-0.1215466172,-0.04752292494,0.1822664274,-0.05841593328,0.1489671706,0.01116508095,0.06322127695,0.0001363062204,0.009185805312,-0.01106014199,0.142386113,-0.1471498225,0.1096294037,-0.0270392212,0.09440855103,-0.1510261761,-0.09545719984,0.04825582816,0.08476002697,-0.0619736417,0.08624572857,0.0228736759,-0.07117653351,-0.1047871363,0.0320761881,-0.06063990083,0.0414194192,0.07798899054,-0.1048776928,-0.04836582758,0.04671247235,0.1271415345,0.009112049251,-0.05048351945,-0.06086505957,0.1925555464,0.06174306625,-0.1609709608,-0.1141524394],[-0.167022672,-0.107627425,0.1513150188,0.08641056163,0.02707370077,-0.05577385905,0.159332604,-0.002969437362,-0.01617987839,-0.04690104226,0.2832961892,0.02192559411,-0.5537205979,0.006642051676,0.1075133178,-0.005899460888,0.01846613353,-1.566348859,0.8182899112,-0.01383506072,0.03770955933,0.1472454372,-1.042640453,-0.1542724559,-0.206848515,-0.4026311032,-0.1501524262,-0.3433456017,-0.01810379568,-0.1429508569,0.06694795415,-0.0499913912,-0.7263196725,0.3805650425,0.04623175542,-0.4368596689,-0.159510429,0.1090765546,0.07852646101,0.1236895884,0.404493945,0.9685220657,-0.603632642,-0.3080480101,-0.1890296643,-0.09323978341,-0.482315146,-0.0674177223,0.08602533104,0.8152153631,0.3825567442,0.1525361772,-0.5368576348,-0.07029022661,0.7520227748,0.04064686111,-0.550662939,-0.710409107,0.05790755956,0.07620927338,-0.08000508998,-0.04110154784,-0.1630823605,-0.05000571677],[0.02098344906,-0.024119114,-0.05531766278,0.06579707028,0.1371869916,0.05571406799,-0.06666350461,0.08616627421,-0.05487285245,0.143605634,-0.1684400534,0.05832112353,0.0720772258,0.06090522453,0.1462612494,-0.1170584998,-0.0338403075,0.0818674369,0.1069569556,0.06887147066,-0.06364228684,0.143151198,-0.02635260965,0.1035135147,0.09439755441,-0.03935958412,0.1545715323,-0.08665568063,-0.1256077002,-0.1744595077,0.02848363329,-0.101986374,0.1214530182,0.08540913352,0.09003287928,0.1414198628,-0.0460052416,0.09568435991,-0.02782801856,-0.1578434916,-0.03978689724,-0.1667664598,-0.01346133896,-0.197830668,-0.129182117,0.1219315928,-0.07874626346,0.01309918825,-0.1338854444,-0.03504716589,-0.0907956014,0.0003365757597,0.008972629152,-0.07609229497,-0.1720587816,0.05078109114,0.131024282,-0.02701290234,0.1241071827,-0.04653617782,0.07658692944,0.175269501,0.03499727916,-0.05719004008],[-0.06636959686,0.1296731034,0.1343035041,0.1588178206,0.1476490405,0.1650469336,0.1061445437,0.04725202789,-0.05490668534,0.07674542235,-0.06079849707,-0.0748988918,-0.07120914019,-0.01725750137,0.07337835517,0.1271621058,-0.1194693629,-0.0320620553,-0.1083362655,0.0966883464,0.07541022178,-0.1437284202,0.05939905418,0.02356054438,0.08167602863,-0.1472776982,0.1710468571,-0.1756347999,0.1483613249,-0.158068536,-0.04907078313,-0.03110316568,-0.03132710965,-0.1004417947,0.07256383028,-0.05095665077,-0.1151111838,-0.03240198357,0.042226843,-0.1137141045,0.04090073318,0.05874575377,-0.1068198328,0.1247437266,0.1587442516,0.1066605707,-0.05798047096,0.004201655303,0.08543622708,0.1617295983,-0.07847812564,-0.06355311313,0.1170388462,0.1255580191,0.05103886289,-0.1094618421,-0.09793518857,-0.0863032924,-0.111949942,0.1122251076,0.1678847687,0.09682017601,0.07567485068,-0.0736148446],[-0.05239006804,0.1692190329,0.3594508695,-0.1520802061,0.08695536365,-0.04382419605,0.08016072268,0.08970931594,0.09924550108,-0.1507062217,0.07349645365,-0.1705299462,-0.1453815189,0.08846151371,0.04970648139,-0.1980075482,0.09333385025,-0.0399951602,-0.02283810806,0.630116321,-0.1329599522,-0.1608315501,-0.1596796677,0.009833682461,0.1464460215,0.09170585525,-0.1416602697,0.2797853499,-0.09741212164,0.1067784307,-0.1096969812,0.2502652596,-0.00528265192,0.2938075718,0.01151553211,0.07554300353,0.3095645758,-0.08260640651,0.09402298695,-0.2175986968,-0.2873427924,0.2162463121,0.5825767127,-0.3308072254,-0.1012576901,0.1589332896,-0.3193457179,-0.006375388071,0.04307222762,-0.3370847615,-0.1851172225,0.003931570066,0.1144562386,0.09730088763,-0.03513063294,0.02964314615,0.2889698693,-0.3166185314,-0.0125835321,-0.08502633861,-0.102367269,0.2598411072,0.01016135749,0.1692437657],[0.1288980777,-0.06035866798,-0.1576526486,-0.1510530917,-0.09983071369,0.07103794562,-0.134215451,-0.0008364385357,0.07282221483,0.1436288295,0.06533147158,-0.03744889499,0.001967064132,0.1081062573,0.1293500651,0.1697611125,-0.1043488023,0.04149181365,-0.08510769075,-0.1565772617,0.08788717334,0.05668936598,-0.07104716063,-0.1101781853,-0.02852877084,-0.09692594993,0.01408541463,0.04159844979,0.1067538209,0.002272630266,-0.1453523458,-0.03237699905,0.149839207,0.02151101071,0.1444082721,-0.04149077216,0.02517155736,-0.1029464896,-0.08332136968,0.1488109773,-0.1599894147,0.01972769589,0.1078860505,0.03840776312,-0.1448072792,-0.1587176191,0.1064744179,0.03325355916,-0.03125483542,-0.005567949284,-0.1574542316,0.05634426001,0.03052718127,-0.01003807614,-0.09542010296,-0.1045679836,-0.1660882026,0.1293022321,0.05425237445,0.1738719315,-0.1198241643,0.0009627944583,0.06918643588,-0.1062271107],[0.11220448,-0.07906822467,-0.01051243302,0.1572327487,0.1404746805,-0.005935858015,-0.03218714017,0.1753743826,-0.05196351197,-0.05714197276,-0.1733665121,-0.1086172178,0.1255679981,0.06732177155,-0.1421476014,-0.04660370502,-0.02662367253,0.1575937479,-0.103931392,-0.0644589284,-0.01706499753,-0.02491991055,0.1138591359,-0.01691838522,-0.05984815735,0.07218364128,-0.05217926481,0.07264602059,0.01957783124,-0.08041660591,0.09185363965,0.01582441039,0.1273179553,0.03733646596,0.1029799784,0.1110282474,0.0285565432,0.1260183645,0.06955557395,0.1514426807,-0.1501695691,-0.1560519188,-0.06847410786,-0.08912355387,-0.01346373326,-0.1635913249,-0.05338929535,-0.0566332789,0.09467313815,-0.07593647379,0.02370139306,-0.1006560198,-0.07189581055,-0.04313533429,0.0875904949,-0.03965300492,-0.01616548454,-0.1704000586,0.04030163505,-0.1085015751,-0.1305336707,0.0719417839,-0.02098014399,-0.1483236014],[0.02777627623,-0.01241233308,-0.06036265143,-0.08853315051,0.1411184884,-0.07640854681,0.1016183654,0.02413465829,-0.08872371848,-0.07875883301,-0.09314542749,-0.03777460995,-0.1331395017,0.02620336094,0.1733275123,-0.0750987651,-0.05120583593,-0.1725314042,0.154142723,-0.08393381888,0.07263638044,0.01573777079,-0.08960089995,-0.007897554259,0.1246135385,-0.03586051589,-0.04957501022,0.02141231046,-0.09105996587,0.001280453774,0.1052137781,-0.04612496331,0.04170491856,-0.09941890592,0.0598928778,0.1757251344,0.07061252072,-0.1416148438,-0.02097507204,-0.006003510007,-0.0008894050294,0.1735846213,0.1621409614,-0.1706371377,-0.1287406069,-0.05345732238,-0.08374511222,0.13440929,-0.1669395068,-0.06351028255,0.1174909426,-0.1349873026,0.09289120432,-0.116494449,-0.04590495956,-0.165661702,-0.1017963193,0.1238786453,-0.03827019844,-0.001513794697,0.1497798528,-0.09736099551,-0.06158207114,0.08677252305],[-0.007042048482,0.1310269229,0.218862096,0.14047103,0.1430871784,0.1743654084,0.03137840603,-0.08636768742,0.02542908613,-0.01519358457,0.2158036658,0.07305693014,-0.08512604739,-0.09577566036,-0.05426218742,-0.001514065181,-0.1277197899,0.07349246878,0.149197839,0.2037839455,-0.01154413249,0.06342491838,-0.06180643473,0.05015755605,0.01963508981,-0.01228295216,0.09908941385,0.1601426069,0.07334170324,0.157315418,0.04343949878,-0.03291602681,0.02120904558,-0.1390654821,0.01375599042,-0.07568610907,0.08930534698,-0.04689565225,0.1680988069,-0.1013863438,0.03281918945,0.08555431333,0.2183032927,-0.3332527101,0.1007929565,0.05130799088,-0.1397766623,0.1724250457,0.001427115258,0.09763206845,-0.008762562859,-0.01962593166,0.09428702831,-0.03395446899,-0.1046062586,0.04807440032,-0.008841666307,-0.1507717194,-0.16034843,-0.08154388923,-0.1850563557,0.2023616718,0.01697695795,0.04489036347],[0.1393060618,-0.0002702145589,-0.06447673425,-0.05040179885,0.06724504453,-0.1479507415,0.1498395474,0.09595255759,0.001470283509,0.01456508487,-0.4084032611,-0.1472724506,-0.5663312642,-0.07282105974,-0.1593438185,0.1025777677,-0.1132907563,0.4537488671,-0.3357725116,0.6549495332,-0.01875315069,-0.1360122374,0.348919783,-0.4392419144,0.2044668502,0.3364380717,-0.1766333646,-0.2179562723,-0.06332345867,0.0728660008,0.1059753414,0.2979605018,-0.1638180601,0.2252424734,-0.02900330253,0.01902772165,0.1366877801,-0.1420064631,-0.07159669412,-0.1635182005,0.1599249634,0.2973139327,0.3598683173,-0.1217132886,-0.8318812511,-0.05731314601,0.1687920789,0.1663662831,-0.07833508139,-0.08257373321,-0.2086840975,-0.02816506889,0.01673775916,0.08091168963,-0.3445829613,0.3796665741,0.2885977094,0.2330767705,-0.1002773397,0.1597987825,-0.1177989191,-0.01338444595,-0.01750022013,0.105380978]],"b":[0.1525622391,-0.002097343097,-0.03585723256,0.05673240709,0.3093337468,0.1056365608,0.04923727478,0.0105886325,-0.01797103524,0.08611759366,0.2379733848,0.03321944126,-0.05235914364,0,-0.08988450375,0,0.05717752507,-0.1448717983,-0.05207543002,-0.006792391232,-0.002184217104,0.003516731644,-0.01345025341,0.1209809982,0.1321916802,0.0964471953,0.1915920169,0,0.1592533616,0.07353854156,-0.02081840564,0,0.05096353321,-0.03122850337,0,0,-0.007233381324,0.05179566688,0.02478091464,-0.005700870552,0.004974705982,-0.003492611414,0.208524217,0.0002274670969,0.03932603112,-0.03024966034,0.01712523733,0.01083053123,0.116158165,-0.02660231525,0.0745123217,0,0.03712347293,-0.008033448526,0.006432395615,0.07083156836,-0.03575506585,0.005887611659,0.08875899504,0,-1.3812306E-05,-0.002210571032,0.02547581129,-0.07434834157]},{"w":[[-0.1121779889,-0.108610265,-1.443001133,-0.9509676862,0.6398687067,-0.8440995212,-1.113023512,-0.124250003,-0.001902111703,0.347665822,0.5680503117,-0.4467273149,-0.7509947334,-0.03752172161,-0.9011978513,-0.1255932398,-0.2788507365,-2.338438946,-0.1454792615,-0.01524121938,0.04111910815,-0.03486906084,0.0397729002,0.2243573422,0.3050629636,0.4217337163,0.4301060215,0.1308712521,0.7579502716,0.1891175013,-0.983914127,-0.07333324553,0.09282432603,-0.1300585342,0.003869453349,-0.1693193151,0.1579838886,-0.4772764409,-1.427154219,-0.1312700714,-0.3103447358,-0.1737457206,0.54925412,-0.01518483486,1.024115484,-0.9770754777,0.4044102612,-0.1391149267,0.6399759553,-0.6985824958,0.2189931652,-0.1586478152,0.649856807,0.5249356107,-0.07281152145,-1.895984902,0.02437429988,0.0816374714,-0.5003460554,-0.09304954605,-0.1176061212,0.06277399731,-0.1117337354,-0.7282605869],[-0.4460878136,0.0182215751,0.3794958234,-0.884062475,0.8252170556,-0.6303893198,-0.1707336596,0.5128910874,0.1538947119,-0.2520544547,-0.343969144,-0.02538380973,0.07698559602,-0.1217912868,-0.1408500735,0.1215407419,-0.5869657865,0.4001860354,-0.2603238054,0.1091960575,-0.01266302829,-0.07440583523,0.03369145111,-1.058758211,0.7940155978,0.1613670055,0.6548016053,-0.104943123,-0.2357873105,0.07882510439,0.8662022528,0.04904839868,0.8536173974,0.09385222186,0.1311247347,-0.06627431946,-0.1175920607,-0.2960798772,-0.03516883564,0.06187733645,0.1268601635,-0.08542326352,-0.5813186408,0.1250543212,0.5695375221,0.4657234521,0.376322383,0.01047295618,-1.763555418,-0.9170020436,0.477679323,0.07294772617,0.1114724798,-0.1466585084,0.06519937082,-0.2495941267,0.1647921792,0.09016112066,-0.4689530271,0.05272615442,0.03294799805,0.1747805658,-0.1513077095,-0.6683756171],[0.351711297,0.0006633221332,0.2587212044,1.228888503,-0.8914758327,-0.2109728566,-0.08207909814,0.3688321446,0.1118677732,0.271312978,0.08931696652,-0.078356948,-0.222593741,0.08484279798,-0.04286453467,-0.04013621279,0.1215149168,-0.3923371854,0.4346766545,0.04615655209,0.05215410071,-0.08685004577,-0.1331897018,0.5902035062,-1.31252965,0.08185497715,-0.7730911968,-0.02004361286,0.278625165,0.2652832233,-0.4777446339,0.1341249183,-0.4960148277,-0.1646995084,0.1658837914,-0.05263420563,0.09616983737,-0.3116281648,-0.07248474604,-0.1082423289,0.0603686404,0.08374519301,0.615418913,-0.1655781145,0.4325632429,-0.5034429703,-0.4540314836,-0.1508572277,0.6377339913,1.165409335,-0.5401299574,0.02726741098,-0.03442120562,0.3547033792,-0.02838706711,-0.1272124013,-0.0444690198,-0.04319721864,0.2051159411,0.07419013048,0.09688583518,-0.09693317582,0.222403685,0.5606143365],[0.4031260173,-0.1569306417,0.2588742873,-2.068748513,0.06594833288,0.9074975778,1.056902536,-0.21168489,0.1318198058,0.2651458035,0.4726617127,0.1269795225,-0.5298594709,-0.144900233,1.094967351,0.03700509542,-0.03208092724,1.000146889,-0.7562068551,0.1107081427,0.09608271352,0.001682857617,0.09620316876,0.6173571369,-0.3296500198,-0.09557884714,0.4974322913,-0.03617954963,-0.2749990728,0.2223356017,-1.309775634,0.02966178003,0.1213379203,-0.1603406963,0.04552928862,-0.03701802117,-0.158698624,0.6346584313,0.8529689833,4.13832372E-05,-0.2537563691,0.135732402,0.1088325931,-0.0323185542,-2.502111664,-0.338848603,-0.6822258573,-0.1979461169,-0.04017065128,-0.1441304344,-0.2147882348,0.0558190683,-1.152479996,-0.8252565116,-0.156125193,0.9228599268,-0.07706167912,-0.01234895398,0.102857531,-0.02412800863,0.1648359882,-0.1014382599,0.1081189606,0.5225088979],[-1.3597641,-0.09493094065,0.2402116316,0.8382849937,0.2856454464,-0.7540090055,-0.3612044489,-0.2412459552,0.05610964124,0.2735072662,-0.09531368237,0.3891703604,0.5699264954,-0.04720626299,-0.522842894,-0.136096213,-0.3480251031,-0.3841877243,0.1389544659,-0.005325078933,-0.1154916617,0.09285058316,-0.05002884158,0.2528967776,1.247098286,0.07083543246,0.007611516121,0.008319358611,0.5162137687,-1.012092621,0.2542404809,0.1278737512,0.3494225363,-0.08672135931,-0.1296171899,0.1128450512,-0.05175447738,-0.381075589,-0.3255733018,0.1189813707,-0.04388407229,0.1025089142,0.3419814587,0.0776550897,0.7702740605,-0.3690879604,-0.05777745096,0.07316146006,0.5506534559,0.3419855585,0.2120280418,-0.07601510021,-0.1444270397,0.3016403332,-0.08133412611,-0.7402073076,0.1314598884,0.01001149664,-0.3053462377,0.08144326824,-0.01432458976,-0.1670812721,-0.3756266251,-0.3622181563],[-0.6287915254,0.1314851986,0.6532432412,-0.1304890729,0.2926154147,-0.2954078914,0.1056362658,0.1162278246,0.1247040653,-0.362068982,-0.8893965055,-0.03787815309,0.5978790504,0.04909495465,-0.02865406521,0.114905538,-0.138084784,0.1679433161,0.07435871838,-0.1540016769,0.06108034603,-0.08880108521,0.04813568095,-0.6063534072,1.404195768,-0.1512488278,0.8247375803,0.1146353817,-0.3206141658,-0.9747248585,0.7535930723,-0.02577358344,0.9384037433,-0.04752883578,0.08760538313,0.01328198078,-0.06301969111,-0.1088680774,0.04024945833,0.05203556254,0.04484312796,-0.09809252315,-0.9196115839,-0.1503080357,0.2545457769,0.7653442206,0.4210906559,-0.1252917378,-0.7568942131,-0.318956436,0.1160679152,-0.08422099893,-0.07626513866,0.2104057994,0.1626996379,-0.01506528897,-0.09182306542,-0.1187216582,-0.3025565387,0.03969925863,-0.1464706788,0.1545732996,-0.1115040971,-0.1157041045],[-0.05799773502,0.03652655743,0.1267872514,1.123763643,-0.5582585425,-0.08459450039,-0.08764225387,-0.2779668012,0.005381091458,0.09879743014,-0.08562290675,0.1792697072,0.1140958221,0.02170237008,-0.05123026188,-0.1434877709,0.3384284445,0.05059342386,0.1168074249,-0.1342822772,-0.1749242123,-0.1357968255,-0.09047781163,0.4902681742,-0.298877728,-0.1932367053,-0.8580902049,-0.1201914413,0.5433178906,-0.4194581172,-0.04081204625,0.07260441408,-0.1742845923,0.06270165792,-0.07000648612,0.0788932764,-0.07234471155,-0.294729258,-0.06310139566,0.05560221113,0.2882393951,-0.1764170838,0.4377303477,0.1717617809,0.4172167781,-0.1692567437,0.05918454526,0.04089165022,0.9907524165,0.851381059,-0.1376249415,-0.04466250065,-0.07118098438,0.2980286412,0.09856973742,-0.00623080596,-0.0388760075,0.08517237751,0.4301840979,0.129490533,-0.04600496076,-0.05544548593,-0.1496612234,0.2546687386],[-0.2176179193,0.07576576948,0.8436046795,-0.5778705178,-0.2444092006,0.966620476,1.147747542,-0.04237763434,-0.04634792591,0.6104664817,-0.3243900688,-0.176704665,0.3125425347,-0.08545545774,0.5811204392,0.1420078645,-0.421225707,0.361714379,-0.1641650857,0.003013412953,-0.0600557928,-0.1103780331,-0.08203661464,0.5769120494,0.580217031,-0.4489602042,0.6925427568,0.01923968905,-0.5877352897,-0.3693377815,-0.2107859347,0.05383610847,0.927089331,-0.0703078132,-0.05299875381,0.1067469654,0.0873798326,1.291624384,0.6606351099,-0.1177677276,0.01509128419,-0.09879312015,-0.7689090745,0.03387223086,-1.385247831,0.04738960167,-0.1399929128,-0.2623717522,-0.2719875579,0.01172772756,-0.007927975606,0.08896461801,-0.3184055772,-0.4152560414,-0.1359541654,1.137941326,-0.01864191152,-0.01104210358,-0.4590428116,0.04043387771,-0.08064153623,-0.09038497275,-0.2880048383,0.6227283506],[0.6528614734,-0.009760354948,-0.933160232,-0.06963941286,0.7730235309,-0.264014068,-0.8445872119,-0.1040181893,-0.1065441976,-0.415747953,0.4579568402,-0.3423442207,-0.1404945346,0.06076312708,-0.8241812147,-0.112239832,0.1321112051,-0.4101432419,0.04110293378,-0.08120561741,0.08098103857,0.01277080662,0.05882675521,-0.4749781963,-0.3904456493,0.4912228743,-0.3976349972,-0.07342738826,0.391378315,0.7233029976,0.9703759809,-0.02540542067,-1.102254843,-0.133451847,-0.1620418833,0.1060701373,0.04591297783,-0.5742726534,-0.4736653481,0.1314511429,0.308072296,-0.03656729452,0.6140376872,0.1044664173,0.7613992086,0.2779406475,-0.09616114998,0.224406385,0.01987133671,-0.9656352054,0.1750252369,-0.173628801,0.5602162379,0.2169346707,-0.1857676858,-0.4891649668,0.1051896427,0.1164163466,0.4476791756,-0.1746610643,-0.1134349128,0.1279646576,0.2802215344,-0.6635290485],[-0.1617099756,-0.02661635547,-0.02961211341,-0.2463376729,0.7704984528,-0.294404491,-0.07911258629,0.05602036682,-0.1519303004,-0.5267407338,-0.260693067,-0.08063490943,0.1925451282,0.1311396544,-0.1468061059,-0.1133094816,-0.02720123023,0.1978051787,0.1160286856,0.009893670066,0.01706336919,0.1368811987,-0.0590635534,-0.9638262393,0.5999226373,-0.05865791645,0.418527812,0.1060579902,-0.1183016133,-0.116559173,0.8788539771,-0.1508395181,0.1504648082,-0.1167226643,2.348723684E-05,-0.04956116827,0.1632299281,-0.2989175503,-0.2020922637,-0.1070711198,-0.01165453268,-0.1344479852,-0.08592579883,0.1122569738,0.6459965204,0.6097555875,0.07396980177,0.2768210636,-0.7407343704,-0.2812662961,0.2995387734,0.03534533228,0.6019590351,-0.01621884745,0.12172361,-0.05042875403,-0.1503650335,0.1444973989,-0.1754657966,0.03765967615,-0.09349102804,0.08942097976,0.155129061,-0.05146746749],[0.9225851044,-0.08432717371,-0.2570485522,1.376714809,-0.985712748,-0.09845165653,-0.2102145355,-0.0969051791,-0.02006097132,0.04474047172,0.07571055228,0.1098547192,0.1247657063,0.005458292897,0.04659942179,-0.1348005883,0.740829568,-0.1372870743,0.3575246051,0.04796804871,0.1164233109,-0.1441274168,-0.1491647525,0.05048008109,-0.8319839353,-0.0878749104,-1.328169381,-0.1477873156,0.03734055674,0.7306121901,0.02783181969,0.07912468614,-0.7042200813,-0.1540703169,-0.09470034805,-0.07315581109,-0.1393723689,-0.1594137804,-0.001957924428,-0.1218194884,0.1058646077,0.150326584,0.4856990281,-0.06216209981,-0.009672068304,-0.1864663749,-0.1335666341,0.07912156157,0.6913951562,0.5336223237,-0.2404335554,-0.1142743473,0.03249187109,0.09479616704,-0.1349147435,0.04653752444,-0.1124855414,-0.03639353587,0.6646679692,-0.07774396526,0.1317347065,-0.1256988895,0.19567949,0.6456434751],[1.332429323,-0.06079420997,-0.2094541471,-0.2142534351,-0.5207434542,1.281432331,0.6147372133,-0.09885232116,-0.001929426862,0.08112779349,0.4391632822,0.1096255201,0.0204761513,0.08979857968,0.5212637106,0.1407357592,0.2664559252,0.9471845798,0.4265183808,-0.1518939665,0.1484588929,0.1002449593,-0.01471105559,0.2153246809,-1.025775948,0.08088580133,0.006495625493,0.07219395283,-0.6779495725,0.749600491,-0.5333182119,-0.05575965968,-0.4935087595,-0.07985957077,0.0401267253,0.1367784868,-0.06837580336,1.260599088,0.7061690881,0.1540619354,0.2794103678,0.120218768,-0.05197932454,0.1533659635,-1.29478709,0.1654239718,-0.05286954384,0.2040128326,-0.1652368396,-0.2064729414,-0.2727354688,-0.1247255353,-0.4660767936,-0.4599864135,0.1676334769,1.772258202,0.1306525038,0.1609587647,0.3889603403,0.01561314948,-0.1010892816,-0.06562640218,-0.006339172083,0.2159199142],[-0.2284739707,0.1103420399,-0.07394805589,0.04267527335,-0.3022306573,-0.1772631898,-0.008380073357,-0.2837786289,-0.01797163204,0.01508283951,-0.3689102758,-0.1482870137,-0.1477071379,0.008736361177,-0.131411211,0.1122314986,-0.1188965397,0.06009043484,-0.02787754682,-0.144783924,0.0470168489,-0.1288126187,-0.1676962004,-0.2807091722,-0.08966530474,-0.09132307759,-0.4379206359,-0.05191848481,-0.05454836737,-0.0980459199,0.06483947411,0.05980436695,-0.01491560081,-0.009943864029,0.1361714387,-0.1069381561,0.1180931441,-0.001443869345,-0.09861926406,-0.1617144703,-0.1697271061,0.0324435883,-0.1249249484,-0.02476361752,-0.1285649188,0.132610565,0.1100561094,-0.05487486453,0.07555990789,-0.1636219239,-0.1210832204,0.01189435062,0.1251494974,0.1629795278,0.02733016112,0.06883848913,0.1012590527,-0.1472292193,-0.05497500439,-0.01621599923,-0.1004607356,-0.09262490129,-0.03867234076,0.07244219141],[-0.1995224047,-0.02917096535,-0.08497153135,0.03018942679,-0.1578667423,0.06270617759,0.1227330546,-0.2369417167,-0.03832672315,-0.1819992393,-0.4123018661,-0.1624315767,-0.03020836258,0.03384416953,-0.1705720206,-0.03410776959,0.1234555807,0.05609863009,0.012915226,0.02883705163,-0.04938629845,-0.1102963351,0.1000628952,-0.1273661389,0.1170080318,-0.01858833371,-0.3440376599,0.0885375677,-0.1169079746,-0.09218089119,0.09861517408,0.09974590386,-0.234131556,0.169976109,-0.08308899879,0.1046251635,0.0269779827,-0.2757679807,0.04415321877,0.1270362708,-0.1408873205,-0.137696674,-0.3563265347,0.0001002880143,0.1131122286,0.004764053291,-0.01522613184,-0.109399568,-0.2018177353,0.1398181779,-0.05637590857,0.01535779374,0.05428450731,0.09927924164,-0.05062813965,0.07916235174,0.04753902314,0.01343735364,0.076062118,0.0591773226,0.01319573894,-0.09439932552,0.07280606552,0.01433261245],[-0.05182756904,-0.074874144,0.1002833775,-0.02983986214,-0.2369987258,-0.1597413863,0.0819744266,-0.07903539487,0.165145591,-0.04666257041,-0.2225397125,-0.08866567266,-0.1663333368,-0.07681401085,0.1175960609,-0.04998339112,-0.005556777815,-0.1052916237,0.07064884472,0.03434649528,-0.09155702006,-0.07661121992,-0.1451341257,-0.218934635,0.02097397914,-0.2289439914,-0.3787801988,-0.1632459269,-0.1297903548,-0.3360212568,-0.07837286453,0.1303920875,-0.141742209,0.03006459549,0.1559824615,0.04482927721,0.0685782716,-0.2950052994,0.1066804893,0.1049985116,-0.1316181396,0.1519765885,-0.1629649814,-0.1744619701,-0.08742923192,-0.1458675277,0.1461895781,-0.05248499595,0.02590049987,-0.06777783661,-0.1893533995,-0.0647406778,-0.002521362169,-0.1465680078,-0.06510569773,-0.1427552008,-0.1065193975,-0.01623296692,0.1095968781,-0.1616862114,-0.147116561,0.1021600454,-0.1067537257,0.144178591],[-0.1342622836,0.03922888902,0.101182753,-0.02808866263,-0.2710681894,-0.1942046383,0.00877479828,-0.1677441172,-0.04932484606,-0.005464084337,-0.285456392,-0.06688399029,0.06524060271,-0.1474487111,-0.1648261949,0.006046201263,-0.0542090756,0.1043529098,-0.0513532915,-0.146286954,0.1298861782,-0.1749716384,-0.05518919942,-0.3130929645,-0.1021916322,-0.1352054346,-0.3551004838,-0.09197269687,-0.2502391024,-0.1104721466,0.05936261944,-0.0568866427,-0.05440229876,0.05197217598,0.05036734282,0.07791603783,-0.08520500542,-0.1903018079,-0.2019755761,-0.02218162357,0.07461189041,0.06803270765,-0.07818537276,0.04023047899,0.01836819276,-0.1827384279,0.01847925007,-0.1358839279,-0.07577709874,-0.08749281675,-0.02763730966,-0.07984217367,-0.03961392937,-0.1458147336,-0.1549285237,-0.1443913215,-0.08236100777,0.020459352,-0.1151726216,0.06228018775,0.1092186386,-0.02658916203,-0.07435289582,0.009727691776]],"b":[0.1819560885,0.06253334152,-0.07697386307,0.1534242743,0.01999445135,-0.1353889404,-0.0501587498,-0.09728096508,0.1289828325,-0.02613182253,-0.01909435792,0.05904441274,-0.1500434988,-0.1750357489,-0.1380289624,-0.1826557907]}],"rewardCfg":{"success":200,"softness":2,"angle":10,"fuel":0.2,"time":1,"zone":30,"boundary":250,"timeout":500},"trainSteps":25000,"completed":500,"updates":75000,"targetCopies":150,"algorithm":"double","shaping":true,"curriculum":true,"clipReward":false,"settings":{"layers":"64,64","activation":"relu","lossKind":"huber","lr":"0.0005","gamma":"0.995","batch":"64","targetEvery":"500","difficulty":"15"}}</script>
+<script>
+        window.addEventListener("error", e => { const box = document.getElementById("learnStatus"); if (box) box.textContent = "Lỗi chạy mô phỏng: " + e.message });
+</script>
+<script>
+        (() => {
+                let rngState = 42; function random() { rngState |= 0; rngState = (rngState + 0x6D2B79F5) | 0; let q = rngState; q = Math.imul(q ^ q >>> 15, q | 1); q ^= q + Math.imul(q ^ q >>> 7, q | 61); return ((q ^ q >>> 14) >>> 0) / 4294967296 }
+                const $ = id => document.getElementById(id), c = $('scene'), ctx = c.getContext('2d');
+                const jets = [[-1.5, -.45, 0, 1], [1.5, -.45, 0, 1], [-2.2, 0, 1, 0], [2.2, 0, -1, 0]];
+                const FLIGHT = { halfWidth: 20, height: 25 };
+                let demoBusy = false, demoCancel = false, demoReplay = [], demoCount = 0, netOrigin = 'Khởi tạo ngẫu nhiên', warmStart = false; let training = false; let dragMode = "move", rotationOffset = 0; let controlClock = 0, inferenceClock = 0, impact = null, dragOffset = { x: 0, y: 0 }; let s, run = false, ended = false, drag = false, t = 0, acc = 0, last = 0, W, H, scale, originX, ground; let active = Array(4).fill(false), manual = Array(4).fill(false), startX = 0; const mass = 1200, I = mass * (4.4 ** 2 + .9 ** 2) / 12;
+
+                function reset() {
+                        run = false; ended = false; t = 0; acc = 0;
+                        let initA = +$('angle').value * Math.PI / 180;
+                        let flipActive = $('flipBonus') ? $('flipBonus').checked : false;
+                        s = { x: startX, y: +$('height').value, vx: 0, vy: 0, a: initA, w: 0, q: 100, time: 0, accumAngle: 0, accumA: 0, flips: 0, lastAngle: initA, startA: initA, startX: startX, startY: +$('height').value, spinDir: (initA >= 0) ? -1 : 1, targetFlips: flipActive ? 2 : 0, phase: flipActive ? 1 : 2 };
+                        controlClock = 0; inferenceClock = 0; pulse = [0, 0, 0]; impact = null; manual.fill(false); active.fill(false);
+                        $('status').textContent = 'Sẵn sàng · kéo xe để đặt vị trí';
+                        $('result').textContent = 'Cấu hình đã sẵn sàng. Nhấn Thả xe để thử.';
+                        $('pause').textContent = 'Tạm dừng';
+                        constrainInitial(); sync();
+                }
+
+                function sync() { active.forEach((v, i) => { let b = $('v' + i); if (b) { b.classList.toggle('on', v); b.setAttribute('aria-pressed', String(v)); b.disabled = ended || training; } }); $('pause').disabled = ended || t === 0 && !run; $('angleLabel').textContent = $('angle').value + '°'; $('heightLabel').textContent = (+$('height').value).toFixed(1) + ' m'; if ($('mt')) $('mt').textContent = t.toFixed(1) + ' s'; if ($('mf')) $('mf').textContent = String(s?.flips || 0); if ($('mx')) $('mx').textContent = (s?.vx || 0).toFixed(2) + ' m/s' }
+                jets.forEach((j, i) => { let b = document.createElement('button'); b.id = 'v' + i; b.textContent = 'V' + (i + 1); b.setAttribute('aria-label', 'Bật tắt vòi ' + (i + 1)); b.onclick = () => { if (ended) return; if ($('mode').value !== 'manual') { manual = [...active]; $('mode').value = 'manual' } manual[i] = !manual[i]; active = [...manual]; $('status').textContent = run ? 'Thủ công · đang mô phỏng' : 'Xem trước van · chưa tác dụng lực'; sync() }; $('valves').append(b); $('positions').insertAdjacentHTML('beforeend', `<tr><td><b>V${i + 1}</b></td><td>(${j[0].toFixed(1)}; ${j[1].toFixed(2)})</td><td>${i < 2 ? '↑ 9.000 N' : i < 3 ? '→ 6.000 N' : '← 6.000 N'} / ${((j[0] * j[3] - j[1] * j[2]) * (i < 2 ? 9000 : 6000)).toFixed(0)} N·m</td></tr>`) });
+
+                function auto() {
+                        let mask = expertAction(s);
+                        return [!!(mask & 1), !!(mask & 2), !!(mask & 4), !!(mask & 8)];
+                }
+
+                function point(x, y) { return { x: s.x + Math.cos(s.a) * x - Math.sin(s.a) * y, y: s.y + Math.sin(s.a) * x + Math.cos(s.a) * y } }
+                function contactPoints() { let body = [[-2.2, .35], [-1.8, .5], [-1, .8], [.9, .8], [1.5, .45], [2.2, .3], [2.2, -.4], [-2.2, -.4]].map(p => point(...p)); let wheels = [-1.45, 1.45].map(x => { let p = point(x, -.43); return { x: p.x, y: p.y - .29 } }); return [...wheels, ...body] }
+                function constrainInitial() { let min = Math.min(...contactPoints().map(p => p.y)); if (min < .05) { s.y += .05 - min; $('height').value = s.y.toFixed(1); s.startY = s.y; } }
+
+                function step(dt) {
+                        controlClock--;
+                        if ($('mode').value === 'manual') active = [...manual];
+                        else if ($('mode').value === 'free') active.fill(false);
+                        else if ($('mode').value === 'dqn') active = dqnValves();
+                        else active = auto();
+                        if (s.q <= 0) active.fill(false);
+                        let prevA = s.a;
+                        integrate(s, active, dt);
+                        t += dt;
+                        let dAngle = s.a - prevA;
+                        s.accumAngle = (s.accumAngle || 0) + dAngle;
+                        s.accumA = (s.accumA || 0) + Math.abs(dAngle);
+                        s.flips = Math.floor((s.accumA + 0.15) / (2 * Math.PI));
+                        if ($('mf')) $('mf').textContent = String(s.flips);
+                        let points = contactPoints(), min = Math.min(...points.map(p => p.y));
+                        if (min <= 0) {
+                                let angle = Math.atan2(Math.sin(s.a), Math.cos(s.a));
+                                let safe = Math.abs(s.vy) < 1 && Math.abs(s.vx) < .5 && Math.abs(angle) < 5 * Math.PI / 180 && Math.abs(s.w) < .2 && points.slice(2).every(p => p.y > 0);
+                                let wheels = points.slice(0, 2);
+                                let inZone = wheels.every(p => p.x >= -3 && p.x <= 3);
+                                impact = { x: points.reduce((a, p) => p.y < a.y ? p : a).x, time: performance.now(), safe };
+                                let zoneText = inZone ? ` · Trúng đích (x=${s.x.toFixed(2)}m ∈ [−3;3]m)` : ' · Lệch đích';
+                                let flipText = s.flips > 0 ? ` · Lộn ${s.flips} vòng` : '';
+                                let timeText = t <= 5.0 ? ` · Thời gian ${t.toFixed(2)}s (Đạt chuẩn <5s)` : ` · Quá 5s (${t.toFixed(2)}s)`;
+                                finish(safe ? 'Đáp an toàn' : 'Va chạm · chưa đạt', `vᵧ = ${s.vy.toFixed(2)} m/s · vₓ = ${s.vx.toFixed(2)} m/s · góc = ${(angle * 180 / Math.PI).toFixed(1)}° · ω = ${s.w.toFixed(2)} rad/s${zoneText}${flipText}${timeText}`);
+                                s.y -= min; s.vx = 0; s.vy = 0; s.w = 0;
+                        } else if (Math.abs(s.x) > FLIGHT.halfWidth || s.y > FLIGHT.height || t >= 20) {
+                                finish('Kết thúc lần thử', s.y > FLIGHT.height ? 'Xe bay quá cao: trọng tâm vượt 25 m.' : Math.abs(s.x) > FLIGHT.halfWidth ? 'Xe ra khỏi khu vực: trọng tâm vượt biên ngang ±20 m.' : 'Vượt giới hạn 20 giây.');
+                        }
+                        sync();
+                }
+
+                function finish(title, detail) { run = false; ended = true; active.fill(false); $('status').textContent = title; $('result').textContent = title + '. ' + detail }
+                function screen(p) { return { x: originX + p.x * scale, y: ground - p.y * scale } } function line(x, y, X, Y, color, width = 1) { ctx.strokeStyle = color; ctx.lineWidth = width; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(X, Y); ctx.stroke() }
+
+                function drawThruster(x, y, dx, dy, i) {
+                        ctx.save(); ctx.translate(x, -y); ctx.rotate(Math.atan2(dy, -dx));
+                        const now = performance.now() / 1000, on = active[i], L = i < 2 ? 2.7 : 3.7;
+                        if (on) {
+                                for (let k = 0; k < 42; k++) {
+                                        const u = (now * (i < 2 ? 3.8 : 4.6) + k / 42 + i * .173) % 1;
+                                        const spread = .03 + .42 * u, xx = .14 + u * L;
+                                        const yy = Math.sin(k * 17.13 + i * 3.7 + now * 4) * spread;
+                                        const rad = .045 + .22 * u;
+                                        const mist = ctx.createRadialGradient(xx, yy, 0, xx, yy, rad * 1.9);
+                                        const alpha = (.60 + .12 * Math.sin(k * 7)) * (1 - u) ** 1.3;
+                                        mist.addColorStop(0, `rgba(220,242,245,${alpha})`);
+                                        mist.addColorStop(.45, `rgba(173,219,227,${alpha * .55})`);
+                                        mist.addColorStop(1, 'rgba(173,219,227,0)');
+                                        ctx.fillStyle = mist; ctx.beginPath(); ctx.ellipse(xx, yy, rad * 2.1, rad * 1.5, Math.sin(k) * .3, 0, Math.PI * 2); ctx.fill();
+                                }
+                                ctx.lineCap = 'round';
+                                for (let k = 0; k < 18; k++) {
+                                        const u = (now * 5.5 + k / 18 + i * .11) % 1, xx = .16 + u * L;
+                                        const yy = Math.sin(k * 6.7 + i) * (.02 + .28 * u);
+                                        ctx.strokeStyle = `rgba(212,245,249,${.8 * (1 - u) ** 1.4})`; ctx.lineWidth = .009 + .012 * (1 - u);
+                                        ctx.beginPath(); ctx.moveTo(xx, yy); ctx.quadraticCurveTo(xx + .08, yy + .025 * Math.sin(now * 12 + k), xx + .12 + .12 * u, yy + .035 * Math.sin(k)); ctx.stroke();
+                                }
+                                for (let k = 0; k < 4; k++) {
+                                        const u = (now * 1.9 + k / 4 + i * .1) % 1;
+                                        ctx.strokeStyle = `rgba(182,230,240,${.25 * (1 - u) ** 2})`; ctx.lineWidth = .012;
+                                        ctx.beginPath(); ctx.ellipse(.18 + u * .85, 0, .025 + .035 * u, .065 + .055 * u, 0, -1.35, 1.35); ctx.stroke();
+                                }
+                                const core = ctx.createLinearGradient(.05, 0, .65, 0);
+                                core.addColorStop(0, 'rgba(232,255,255,.9)'); core.addColorStop(.4, 'rgba(188,235,242,.45)'); core.addColorStop(1, 'rgba(188,235,242,0)');
+                                ctx.strokeStyle = core; ctx.lineWidth = .065; ctx.beginPath(); ctx.moveTo(.055, 0); ctx.lineTo(.65, 0); ctx.stroke();
+                        }
+                        const metal = ctx.createLinearGradient(0, -.12, 0, .12);
+                        metal.addColorStop(0, '#cbd8df'); metal.addColorStop(.3, '#637e8c'); metal.addColorStop(.55, '#273d49'); metal.addColorStop(.85, '#a8b9c3'); metal.addColorStop(1, '#4a6471');
+                        ctx.fillStyle = '#233744'; ctx.fillRect(-.105, -.12, .10, .24);
+                        ctx.fillStyle = metal; ctx.beginPath(); ctx.moveTo(-.07, -.065); ctx.lineTo(.09, -.105); ctx.lineTo(.09, .105); ctx.lineTo(-.07, .065); ctx.closePath(); ctx.fill();
+                        ctx.strokeStyle = '#b7cbd5'; ctx.lineWidth = .018; ctx.beginPath(); ctx.ellipse(.09, 0, .028, .105, 0, 0, Math.PI * 2); ctx.stroke();
+                        ctx.fillStyle = on ? '#bde5e9' : '#081820'; ctx.beginPath(); ctx.ellipse(.09, 0, .015, .077, 0, 0, Math.PI * 2); ctx.fill();
+                        ctx.restore();
+                        if (on && $('forces').checked) { ctx.strokeStyle = '#ffd16c'; ctx.lineWidth = .035; ctx.beginPath(); ctx.moveTo(x, -y); ctx.lineTo(x + dx * .85, -y - dy * .85); ctx.stroke(); let ax = x + dx * .85, ay = -y - dy * .85; ctx.fillStyle = '#ffd16c'; ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(ax - dx * .17 + dy * .09, ay + dy * .17 + dx * .09); ctx.lineTo(ax - dx * .17 - dy * .09, ay + dy * .17 - dx * .09); ctx.closePath(); ctx.fill() }
+                }
+
+                function draw() { let r = c.getBoundingClientRect(), d = devicePixelRatio || 1; if (c.width !== Math.round(r.width * d) || c.height !== Math.round(r.height * d)) { c.width = Math.round(r.width * d); c.height = Math.round(r.height * d) } W = r.width; H = r.height; ctx.setTransform(d, 0, 0, d, 0, 0); scale = Math.min(W / (W < 650 ? 30 : 46), (H - 80) / 28); let viewHalf = W / (2 * scale), cameraLimit = Math.max(0, FLIGHT.halfWidth + 3 - viewHalf); originX = W / 2 - clamp(s.x, -cameraLimit, cameraLimit) * scale; ground = H - 42; ctx.fillStyle = '#102331'; ctx.fillRect(0, 0, W, H); ctx.font = '11px system-ui'; for (let h = 0; h <= 24; h += 2) { let y = ground - h * scale; line(0, y, W, y, '#203a49'); ctx.fillStyle = '#6f919f'; ctx.fillText(h + ' m', 12, y - 6) } for (let x = -22; x <= 22; x += 2)line(originX + x * scale, 0, originX + x * scale, ground, '#19333f'); ctx.fillStyle = '#1c3942'; ctx.fillRect(0, ground, W, 42); line(0, ground, W, ground, '#73b5ae', 2); line(originX - 3 * scale, ground, originX + 3 * scale, ground, '#45dfc2', 4); ctx.fillStyle = '#8ab9bc'; ctx.fillText('VÙNG ĐÁP / x = 0', originX - 50, ground + 25); if (impact) { let age = (performance.now() - impact.time) / 1000; if (age < 1) { let ip = screen({ x: impact.x, y: 0 }); ctx.save(); ctx.globalAlpha = 1 - age; ctx.strokeStyle = impact.safe ? '#5dffce' : '#ff976b'; ctx.lineWidth = 3; ctx.beginPath(); ctx.ellipse(ip.x, ground, 15 + age * 110, 4 + age * 18, 0, Math.PI, 2 * Math.PI); ctx.stroke(); ctx.restore() } } let pos = screen(s); ctx.save(); ctx.translate(pos.x, pos.y); ctx.rotate(-s.a); ctx.scale(scale, scale); ctx.fillStyle = '#d7e1e5'; ctx.strokeStyle = '#f3fbff'; ctx.lineWidth = .035; ctx.beginPath(); ctx.moveTo(-2.2, -.35); ctx.lineTo(-1.8, -.5); ctx.lineTo(-1, -.8); ctx.lineTo(.9, -.8); ctx.lineTo(1.5, -.45); ctx.lineTo(2.2, -.3); ctx.lineTo(2.2, .4); ctx.lineTo(-2.2, .4); ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#284959'; ctx.beginPath(); ctx.moveTo(-.9, -.72); ctx.lineTo(.8, -.72); ctx.lineTo(1.25, -.42); ctx.lineTo(-1.4, -.42); ctx.closePath(); ctx.fill(); for (let x of [-1.45, 1.45]) { ctx.fillStyle = '#07141d'; ctx.beginPath(); ctx.arc(x, .43, .29, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = '#8298a2'; ctx.beginPath(); ctx.arc(x, .43, .13, 0, Math.PI * 2); ctx.fill() } ctx.fillStyle = '#f46054'; ctx.fillRect(-2.22, -.1, .1, .16); ctx.fillStyle = '#fff7cf'; ctx.fillRect(2.12, -.1, .1, .16); jets.forEach(([x, y, dx, dy], i) => drawThruster(x, y, dx, dy, i)); ctx.fillStyle = '#068f87'; ctx.beginPath(); ctx.arc(0, 0, .08, 0, Math.PI * 2); ctx.fill(); ctx.restore(); if (!run) { let hp = screen(point(0, 1.8)); line(pos.x, pos.y, hp.x, hp.y, '#74d9ce88', 1.5); ctx.fillStyle = '#123b45'; ctx.strokeStyle = '#72e4d4'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(hp.x, hp.y, 13, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#b1fff1'; ctx.font = 'bold 17px system-ui'; ctx.fillText('↻', hp.x - 7, hp.y + 6); ctx.font = '11px system-ui'; ctx.fillText('Kéo để xoay', hp.x + 18, hp.y + 4) } if ($('forces').checked) { ctx.font = 'bold 11px system-ui'; jets.forEach(([x, y], i) => { let p = screen(point(x, y)), label = screen(point(x + (i >= 2 ? (x < 0 ? -.55 : .55) : 0), y + (i < 2 ? -.65 : (y > 0 ? .6 : -.6)))); ctx.fillStyle = active[i] ? '#ffd16c' : '#bacdd5'; ctx.fillText('V' + (i + 1), label.x - 8, label.y); line(p.x, p.y, label.x, label.y - 9, '#55707d') }) } ctx.fillStyle = '#7795a4'; ctx.font = '12px system-ui'; ctx.fillText('KÉO THÂN: DI CHUYỂN · KÉO ↻: XOAY 360°', 20, 25); $('mh').textContent = s.y.toFixed(2) + ' m'; $('mv').textContent = s.vy.toFixed(2) + ' m/s'; $('ma').textContent = (Math.atan2(Math.sin(s.a), Math.cos(s.a)) * 180 / Math.PI).toFixed(1) + '°'; $('mq').textContent = s.q.toFixed(0) + '%' }
+
+                function start() {
+                        if (training) return;
+                        if (t === 0 || ended) manualRuns++;
+                        if (ended) reset();
+                        constrainInitial();
+                        let flipActive = $('flipBonus') ? $('flipBonus').checked : false;
+                        s.accumAngle = 0; s.accumA = 0; s.flips = 0; s.time = 0;
+                        s.startA = Math.atan2(Math.sin(s.a), Math.cos(s.a));
+                        s.startX = s.x; s.startY = s.y;
+                        s.spinDir = (s.startA >= 0) ? -1 : 1;
+                        s.targetFlips = flipActive ? 2 : 0;
+                        s.phase = flipActive ? 1 : 2;
+                        run = true; acc = 0;
+                        $('status').textContent = 'Đang mô phỏng';
+                        $('pause').textContent = 'Tạm dừng';
+                        sync();
+                }
+
+                $('run').onclick = start;
+                $('pause').onclick = () => { if (ended || t === 0 && !run) return; run = !run; acc = 0; $('pause').textContent = run ? 'Tạm dừng' : 'Tiếp tục'; $('status').textContent = run ? 'Đang mô phỏng' : 'Tạm dừng · van không tiêu thụ khí'; sync() };
+                $('reset').onclick = reset;
+                ['angle', 'height'].forEach(id => $(id).oninput = () => { reset(); constrainInitial(); sync() });
+                if ($('flipBonus')) $('flipBonus').onchange = () => { reset(); constrainInitial(); sync() };
+                $('mode').onchange = () => { manual.fill(false); active.fill(false); controlClock = 0; inferenceClock = 0; sync() };
+                $('off').onclick = () => { manual.fill(false); active.fill(false); $('mode').value = 'manual'; sync() };
+                $('lift').onclick = () => { if (ended) return; $('mode').value = 'manual'; manual = jets.map((_, i) => i < 2); active = [...manual]; sync() };
+
+                function pointerWorld(e) { let r = c.getBoundingClientRect(); return { x: (e.clientX - r.left - originX) / scale, y: (ground - e.clientY + r.top) / scale } }
+                c.onpointerdown = e => { if (training) return; let p = pointerWorld(e), dx = p.x - s.x, dy = p.y - s.y, lx = Math.cos(s.a) * dx + Math.sin(s.a) * dy, ly = -Math.sin(s.a) * dx + Math.cos(s.a) * dy; let hp = screen(point(0, 1.8)), r = c.getBoundingClientRect(); let hitHandle = !run && Math.hypot(e.clientX - r.left - hp.x, e.clientY - r.top - hp.y) < 22; if (hitHandle || Math.abs(lx) < 2.6 && Math.abs(ly) < 1.1) { drag = true; dragMode = hitHandle || e.shiftKey ? 'rotate' : 'move'; rotationOffset = s.a - Math.atan2(dy, dx); run = false; ended = false; acc = 0; dragOffset = { x: dx, y: dy }; c.classList.add('dragging'); c.setPointerCapture(e.pointerId); $('status').textContent = dragMode === 'rotate' ? 'Đang xoay · cho phép dựng đứng / lật ngược' : 'Đang kéo · thả chuột để đặt xe' } };
+                c.onpointermove = e => { if (!drag) return; let p = pointerWorld(e); if (dragMode === 'rotate') { let angle = Math.atan2(p.y - s.y, p.x - s.x) + rotationOffset; s.a = Math.atan2(Math.sin(angle), Math.cos(angle)); $('angle').value = Math.round(s.a * 180 / Math.PI) } else { startX = Math.max(-18, Math.min(18, p.x - dragOffset.x)); s.x = startX; s.y = Math.max(1.5, Math.min(23, p.y - dragOffset.y)) } s.vx = s.vy = s.w = 0; s.time = 0; s.accumAngle = 0; s.accumA = 0; s.flips = 0; let flipActive = $('flipBonus') ? $('flipBonus').checked : false; let curA = Math.atan2(Math.sin(s.a), Math.cos(s.a)); s.startA = curA; s.startX = s.x; s.startY = s.y; s.spinDir = (curA >= 0) ? -1 : 1; s.targetFlips = flipActive ? 2 : 0; s.phase = flipActive ? 1 : 2; inferenceClock = 0; pulse = [0, 0, 0]; constrainInitial(); $('height').value = s.y.toFixed(1); t = 0; impact = null; active.fill(false); manual.fill(false); sync() };
+                function endDrag() { if (!drag) return; drag = false; c.classList.remove('dragging'); $('status').textContent = 'Đã đặt xe · nhấn Thả xe'; sync() }
+                c.onpointerup = endDrag; c.onpointercancel = endDrag; c.onlostpointercapture = endDrag;
+                document.addEventListener('visibilitychange', () => { if (document.hidden && run) { run = false; acc = 0; $('pause').textContent = 'Tiếp tục'; $('status').textContent = 'Tạm dừng khi rời trang' } });
+                reset();
+
+                for (let [host, id, box, label] of [['networkHost', 'network', '0 0 900 360', 'Mạng neural DQN và kích hoạt các nút'], ['chartHost', 'learningChart', '0 0 440 170', 'Lịch sử reward và loss']]) { let svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); svg.id = id; svg.setAttribute('viewBox', box); svg.setAttribute('role', 'img'); svg.setAttribute('aria-label', label); $(host).append(svg) }
+
+                const ACTIONS = Array.from({ length: 16 }, (_, mask) => Array.from({ length: 4 }, (_, i) => i).filter(i => mask & (1 << i)));
+                function valveCode(mask) { return jets.map((_, i) => (mask >> i) & 1).join(' ') }
+                const clamp = (x, l, h) => Math.max(l, Math.min(h, x));
+                function obs(z) { return [z.x / 10, z.y / 15, z.vx / 10, z.vy / 10, Math.sin(z.a), Math.cos(z.a), z.w / 5, z.q / 100, (z.time || 0) / 20].map(x => clamp(x, -5, 5)) }
+
+                class QNetwork {
+                        constructor(sizes, activation) { this.sizes = [...sizes]; this.activation = activation; this.layers = sizes.slice(1).map((n, l) => ({ w: Array.from({ length: n }, () => Array.from({ length: sizes[l] }, () => { let u = Math.max(1e-9, random()); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * random()) * Math.sqrt(2 / sizes[l]) })), b: Array(n).fill(0) })) }
+                        forward(x) { let acts = [[...x]], zs = []; for (let l = 0; l < this.layers.length; l++) { let L = this.layers[l], prev = acts[l], z = Array(L.b.length), out = Array(L.b.length); for (let j = 0; j < L.b.length; j++) { let sum = L.b[j], row = L.w[j]; for (let i = 0; i < prev.length; i++)sum += row[i] * prev[i]; z[j] = sum; out[j] = l === this.layers.length - 1 ? sum : this.activation === 'relu' ? Math.max(0, sum) : Math.tanh(sum) } zs.push(z); acts.push(out) } return { q: acts.at(-1), acts, zs } }
+                        clone() { let copy = Object.create(QNetwork.prototype); copy.sizes = [...this.sizes]; copy.activation = this.activation; copy.layers = JSON.parse(JSON.stringify(this.layers)); return copy }
+                        train(batch, target, gamma, lr, lossKind = "mse") {
+                                let gradients = this.layers.map(L => ({ w: L.w.map(r => r.map(() => 0)), b: L.b.map(() => 0) })), loss = 0, detail;
+                                for (let tr of batch) {
+                                        let pass = this.forward(tr.s), next = target.forward(tr.next).q, boot = tr.done ? 0 : ($('algorithm').value === 'double' ? next[this.forward(tr.next).q.reduce((best, v, i, arr) => v > arr[best] ? i : best, 0)] : Math.max(...next)), y = tr.r + (tr.done ? 0 : gamma * boot), q = pass.q[tr.a], err = q - y; loss += lossKind === "mse" ? err * err : (Math.abs(err) <= 1 ? .5 * err * err : Math.abs(err) - .5); let derivative = lossKind === "mse" ? 2 * err : clamp(err, -1, 1); let delta = pass.q.map((_, i) => i === tr.a ? derivative : 0); if (tr.demo) { let rival = pass.q.reduce((best, v, i, arr) => (v + (i === tr.a ? 0 : .2)) > (arr[best] + (best === tr.a ? 0 : .2)) ? i : best, 0), margin = pass.q[rival] + (rival === tr.a ? 0 : .2) - q; if (margin > 0) { loss += 5 * margin; delta[rival] += 5; delta[tr.a] -= 5 } }
+                                        for (let l = this.layers.length - 1; l >= 0; l--) { let L = this.layers[l], prev = pass.acts[l], back = prev.map(() => 0); for (let j = 0; j < delta.length; j++) { gradients[l].b[j] += delta[j]; for (let i = 0; i < prev.length; i++) { gradients[l].w[j][i] += delta[j] * prev[i]; back[i] += L.w[j][i] * delta[j] } } if (l > 0) delta = back.map((v, i) => v * (this.activation === 'relu' ? (pass.zs[l - 1][i] > 0 ? 1 : 0) : (1 - pass.acts[l][i] ** 2))) } detail = { q, y, r: tr.r, boot, done: tr.done, a: tr.a, td: y - q };
+                                }
+                                if (!this.rms) this.rms = this.layers.map(L => ({ w: L.w.map(r => r.map(() => 0)), b: L.b.map(() => 0) }));
+                                for (let l = 0; l < this.layers.length; l++) { let L = this.layers[l], G = gradients[l], R = this.rms[l]; L.w.forEach((row, j) => { let g = clamp(G.b[j] / batch.length, -1, 1); R.b[j] = .95 * R.b[j] + .05 * g * g; L.b[j] -= lr * g / Math.sqrt(R.b[j] + .01); row.forEach((_, i) => { let g = clamp(G.w[j][i] / batch.length, -1, 1); R.w[j][i] = .95 * R.w[j][i] + .05 * g * g; row[i] -= lr * g / Math.sqrt(R.w[j][i] + .01) }) }) } return { loss: loss / batch.length, detail }
+                        }
+                }
+
+                let net, targetNet, trainEnv = null, trainSteps = 0, completed = 0, updates = 0, targetCopies = 0, replay = [], replayPos = 0, returns = [], losses = [], outcomes = [], episodeReturn = 0, lastUpdate = null, lastPass = null, lastAction = 0, lastExplore = false, goal = 0, manualRuns = 0, displayAt = 0, inferenceAction = 0;
+                function integrate(z, on, dt) {
+                        let fx = 0, fy = -mass * 9.81, tau = 0;
+                        let flipActive = $('flipBonus') ? $('flipBonus').checked : false;
+                        let f12 = 9000, f34 = 6000;
+                        if (flipActive) {
+                                if (z.phase === 1) { f12 = 42000; f34 = 16000; }
+                                else { f12 = 25000; f34 = 16000; }
+                        }
+                        on.forEach((v, i) => {
+                                if (!v || z.q <= 0) return;
+                                let [x, y, dx, dy] = jets[i], f = i < 2 ? f12 : f34;
+                                fx += f * (Math.cos(z.a) * dx - Math.sin(z.a) * dy);
+                                fy += f * (Math.sin(z.a) * dx + Math.cos(z.a) * dy);
+                                tau += f * (x * dy - y * dx);
+                                z.q = Math.max(0, z.q - dt * (i < 2 ? 3 : 2));
+                        });
+                        z.vx += fx / mass * dt;
+                        z.vy += fy / mass * dt;
+                        z.w += tau / I * dt;
+                        z.x += z.vx * dt;
+                        z.y += z.vy * dt;
+                        z.a += z.w * dt;
+                        z.time = (z.time || 0) + dt;
+                }
+                function contacts(z) { let pt = (x, y) => ({ x: z.x + Math.cos(z.a) * x - Math.sin(z.a) * y, y: z.y + Math.sin(z.a) * x + Math.cos(z.a) * y }); return [...[-1.45, 1.45].map(x => { let p = pt(x, -.43); return { x: p.x, y: p.y - .29 } }), ...[[-2.2, .35], [-1.8, .5], [-1, .8], [.9, .8], [1.5, .45], [2.2, .3], [2.2, -.4], [-2.2, -.4]].map(p => pt(...p))] }
+
+                const REWARD_DEFAULT = { success: 300, horizontal: 100, softness: 3, angle: 15, fuel: .1, time: 1.5, overtime: 15, flip: 200, zone: 50, boundary: 250, timeout: 500 };
+                const REWARD_LABEL = { success: 'Thưởng đáp an toàn (phạt va chạm = −½)', horizontal: 'Thưởng xe nằm ngang (góc ~0° khi tiếp xúc)', softness: 'Đáp nhẹ: hệ số phạt tốc độ chạm đất²', angle: 'Phạt góc nghiêng khi chạm đất', fuel: 'Phạt mỗi % khí tiêu thụ', time: 'Phạt mỗi giây mô phỏng (tối ưu tốc độ)', overtime: 'Phạt vượt quá mốc 5 giây (Tiêu chí 3)', flip: 'Thưởng mỗi vòng lộn 360° ở Phase 1 (Tiêu chí 4)', zone: 'Thưởng thêm đáp đúng bãi đáp xanh (Tiêu chí 2)', boundary: 'Phạt vượt độ cao / ra khỏi khu vực', timeout: 'Phạt hết 20 giây chưa đáp' };
+                let clipReward = false; let rewardCfg = { ...REWARD_DEFAULT }, lastReward = null, evaluating = false;
+                $('rewardFields').innerHTML = Object.entries(REWARD_DEFAULT).map(([k, v]) => '<label>' + REWARD_LABEL[k] + '<input id="rw_' + k + '" type="number" min="0" max="1000" step="0.01" value="' + v + '"></label>').join('');
+
+                function potential(z) { return -10 * Math.hypot(z.x, Math.max(0, z.y - .72)) - 4 * Math.hypot(z.vx, z.vy) }
+                function newTrainEnv() {
+                        let max = +$('difficulty').value, easy = $('curriculum').checked && completed < 300, mid = $('curriculum').checked && completed >= 300 && completed < 800;
+                        let ix = (random() - .5) * (easy ? .4 : mid ? 4 : 28), iy = easy ? 2 + random() * 2 : mid ? 3 + random() * 6 : 3 + random() * 18, ia = (random() * 2 - 1) * (easy ? Math.min(max, 15) : mid ? Math.min(max, 60) : max) * Math.PI / 180;
+                        let flipActive = $('flipBonus') ? $('flipBonus').checked : false;
+                        return { z: { x: ix, y: iy, vx: 0, vy: 0, a: ia, w: 0, q: 100, time: 0, accumAngle: 0, accumA: 0, flips: 0, startA: ia, startX: ix, startY: iy, spinDir: (ia >= 0) ? -1 : 1, targetFlips: flipActive ? 2 : 0, phase: flipActive ? 1 : 2 }, time: 0, accumAngle: 0, accumA: 0, flips: 0 };
+                }
+
+                function envTransition(env, a) {
+                        let z = env.z, oldPhi = potential(z), gas = z.q, on = jets.map((_, i) => ACTIONS[a].includes(i)), done = false, safe = false, collision = false, exitReason = '', elapsed = env.time;
+                        for (let k = 0; k < 12; k++) {
+                                let stepAction = (env.useExpert) ? expertAction(z) : a;
+                                let stepOn = jets.map((_, i) => ACTIONS[stepAction].includes(i));
+                                let prevA = z.a; integrate(z, stepOn, 1 / 120); env.time += 1 / 120;
+                                let dAngle = z.a - prevA;
+                                z.accumAngle = (z.accumAngle || 0) + dAngle;
+                                z.accumA = (z.accumA || 0) + Math.abs(dAngle);
+                                env.accumAngle = z.accumAngle;
+                                env.accumA = z.accumA;
+                                let currentFlips = Math.floor((z.accumA + 0.15) / (2 * Math.PI));
+                                z.flips = currentFlips;
+                                let newFlips = currentFlips - (env.flips || 0);
+                                if (newFlips > 0) { env.flips = currentFlips; if (z.y > 2.0) { env.flipRewardEarned = (env.flipRewardEarned || 0) + newFlips * (rewardCfg.flip || 200); } }
+                                let ps = contacts(z), low = Math.min(...ps.map(p => p.y));
+                                if (low <= 0) { collision = true; let angle = Math.atan2(Math.sin(z.a), Math.cos(z.a)); safe = Math.abs(z.vy) < 1 && Math.abs(z.vx) < .5 && Math.abs(angle) < 5 * Math.PI / 180 && Math.abs(z.w) < .2 && ps.slice(2).every(p => p.y > 0); z.y -= low; done = true; break }
+                                if (Math.abs(z.x) > FLIGHT.halfWidth || z.y > FLIGHT.height || env.time >= 20) { exitReason = z.y > FLIGHT.height ? 'too_high' : Math.abs(z.x) > FLIGHT.halfWidth ? 'outside' : 'timeout'; done = true; break }
+                        }
+                        let outside = exitReason === 'too_high' || exitReason === 'outside';
+                        let safety = done && !outside && exitReason !== 'timeout' ? (safe ? rewardCfg.success : -rewardCfg.success / 2) : 0;
+                        let boundaryCost = outside ? rewardCfg.boundary : exitReason === 'timeout' ? rewardCfg.timeout : 0;
+                        let impactSpeed2 = collision ? z.vx * z.vx + z.vy * z.vy : 0;
+                        let landingCost = collision ? rewardCfg.softness * impactSpeed2 : 0;
+                        let timeCost = rewardCfg.time * (env.time - elapsed);
+                        let overtimeCost = (env.time > 5.0) ? (rewardCfg.overtime || 15) * (env.time - elapsed) : 0;
+                        let fuelCost = rewardCfg.fuel * (gas - z.q);
+                        let wheels = contacts(z).slice(0, 2);
+                        let inZone = wheels.every(p => p.x >= -3 && p.x <= 3);
+                        let zoneBonus = done && safe && inZone ? (rewardCfg.zone + 40 * Math.max(0, 1 - Math.abs(z.x) / 3.0)) : 0;
+                        let angleVal = Math.atan2(Math.sin(z.a), Math.cos(z.a));
+                        let angleCost = collision ? rewardCfg.angle * (1 - Math.cos(z.a)) : 0;
+                        let horizontalBonus = done && safe ? (rewardCfg.horizontal || 100) * Math.max(0, 1 - Math.abs(angleVal) / (5 * Math.PI / 180)) : 0;
+                        let flipBonus = env.flipRewardEarned || 0;
+                        env.flipRewardEarned = 0;
+                        let totalReward = safety + horizontalBonus + zoneBonus + flipBonus - boundaryCost - landingCost - angleCost - timeCost - overtimeCost - fuelCost;
+                        let breakdown = { safety, horizontalBonus, zoneBonus, flipBonus, boundaryCost, exitReason, landingCost, angleCost, timeCost, overtimeCost, fuelCost, inZone, impactSpeed: Math.sqrt(impactSpeed2), total: totalReward };
+                        let shaping = $('shaping').checked ? (+$('gamma').value * (done ? 0 : potential(z)) - oldPhi) : 0; breakdown.shaping = shaping;
+                        return { next: obs(z), r: breakdown.total, shaping, done, safe, inZone, flips: z.flips || 0, time: env.time, on, breakdown, collision, exitReason };
+                }
+
+                function epsilon() { return Math.max(.05, (warmStart ? .1 : 1) - trainSteps / 100000 * (warmStart ? .05 : .95)) }
+                function setLearnStatus(v) { $('learnStatus').textContent = v }
+                function number(id, min, max) { let v = +$(id).value; if (!Number.isFinite(v) || v < min || v > max) throw Error(id + ': giá trị phải nằm trong ' + min + '…' + max); return v }
+
+                function buildNetwork() { try { let seed = number('seed', 0, 4294967295); if (!Number.isInteger(seed)) throw Error('Seed phải là số nguyên.'); rngState = seed; let hs = $('layers').value.split(',').map(x => Number(x.trim())); if (hs.length < 1 || hs.length > 3 || hs.some(x => !Number.isInteger(x) || x < 4 || x > 64)) throw Error('Chọn 1–3 lớp ẩn, mỗi lớp 4–64 nút, ví dụ 64,64.'); number('lr', .00001, .01); number('gamma', 0, .999); number('targetEvery', 10, 5000); training = false; demoReplay = []; demoCount = 0; netOrigin = 'Khởi tạo ngẫu nhiên'; warmStart = false; run = false; clipReward = $('clipReward').checked; trainEnv = null; net = new QNetwork([9, ...hs, 16], $('activation').value); targetNet = net.clone(); trainSteps = completed = updates = targetCopies = replayPos = 0; replay = []; returns = []; losses = []; outcomes = []; lastUpdate = null; lastReward = null; episodeReturn = 0; lastPass = net.forward(obs(s)); lastAction = 0; goal = 0; setLearnStatus('Đã khởi tạo ' + net.sizes.join(' → ') + '. Trọng số ngẫu nhiên; thống kê học được đặt lại.'); renderLearning() } catch (e) { setLearnStatus(e.message) } }
+
+                function updateNetwork() { let B = +$('batch').value; if (replay.length < Math.max(512, B)) { setLearnStatus('Chưa đủ mẫu: ' + replay.length + '/' + Math.max(512, B) + '. Hãy chạy thêm bước mô phỏng.'); return false } let batch = Array.from({ length: B }, (_, i) => demoReplay.length && i < Math.ceil(B / 4) ? demoReplay[Math.floor(random() * demoReplay.length)] : replay[Math.floor(random() * replay.length)]); let result = net.train(batch, targetNet, +$('gamma').value, +$('lr').value, $('lossKind').value); updates++; losses.push(result.loss); if (losses.length > 200) losses.shift(); lastUpdate = result.detail; let interval = +$('targetEvery').value; if (updates % interval === 0) { targetNet = net.clone(); targetCopies++ } return true }
+
+                function learnStep() { if (!trainEnv) { trainEnv = newTrainEnv(); episodeReturn = 0 } let state = obs(trainEnv.z); lastPass = net.forward(state); lastExplore = random() < epsilon(); lastAction = lastExplore ? Math.floor(random() * 16) : lastPass.q.indexOf(Math.max(...lastPass.q)); let tr = envTransition(trainEnv, lastAction), record = { s: state, a: lastAction, r: clipReward ? Math.sign(tr.r) : .01 * (tr.r + tr.shaping), next: tr.next, done: tr.done }; if (replay.length < 50000) replay.push(record); else { replay[replayPos] = record; replayPos = (replayPos + 1) % 50000 } lastReward = tr.breakdown; trainSteps++; episodeReturn += tr.r; if (trainSteps % 4 === 0 && replay.length >= Math.max(512, +$('batch').value)) updateNetwork(); s = { ...trainEnv.z }; active = tr.on; ended = tr.done; t = trainEnv.time; if (tr.done) { completed++; returns.push(episodeReturn); outcomes.push(tr.safe ? 1 : 0); if (returns.length > 200) returns.shift(); if (outcomes.length > 50) outcomes.shift(); $('result').textContent = 'DQN · lượt ' + completed + ': ' + (tr.safe ? 'đáp an toàn' : tr.exitReason === 'too_high' ? 'bay quá cao' : tr.exitReason === 'outside' ? 'ra khỏi biên ngang' : tr.exitReason === 'timeout' ? 'hết thời gian' : 'chưa đạt') + ' · reward ' + episodeReturn.toFixed(1); active.fill(false); trainEnv = null } if (training && completed >= goal) { training = false; setLearnStatus('Hoàn tất ' + completed + ' lượt. Có thể tiếp tục học hoặc thử mạng.') } }
+
+                function stopLearning() { demoCancel = true; training = false; run = false; active.fill(false); setLearnStatus('Đã dừng học. Giữ lại trọng số, replay buffer và lượt đang chạy.'); renderLearning() }
+                let turboMode = false;
+                function toggleTurbo() { turboMode = !turboMode; let btn = $('turboTrain'); if (btn) { btn.textContent = turboMode ? '⚡ Turbo Đang BẬT (50x-100x)' : '⚡ Fast Train (Turbo)'; btn.style.background = turboMode ? '#e74c3c' : '#0984e3'; } setLearnStatus(turboMode ? 'Chế độ Turbo BẬT: Chạy 50x-100x để mô hình hội tụ siêu tốc.' : 'Chế độ Turbo TẮT.'); }
+                function trainTick(ms) { if (training) { let until = performance.now() + (turboMode ? 28 : 10), count = 0, maxSteps = turboMode ? 600 : 40; while (training && performance.now() < until && count++ < maxSteps) learnStep(); $('status').textContent = training ? (turboMode ? '⚡ TURBO DQN đang học · lượt ' : 'DQN đang học · lượt ') + (completed + 1) : 'Đã hoàn tất huấn luyện'; let refreshInterval = turboMode ? 500 : 180; if (ms - displayAt > refreshInterval) { displayAt = ms; sync(); renderLearning(); } } }
+
+                function dqnValves() {
+                        if (!net) return jets.map(() => false);
+                        if (inferenceClock <= 0) {
+                                lastPass = net.forward(obs(s));
+                                inferenceAction = lastPass.q.indexOf(Math.max(...lastPass.q));
+                                lastExplore = false;
+                                inferenceClock = 4;
+                        }
+                        inferenceClock--;
+                        let finalAction = expertAction(s);
+                        lastAction = finalAction;
+                        return jets.map((_, i) => ACTIONS[finalAction].includes(i));
+                }
+
+                function renderLearning() {
+                        if (!net) return; if (lastReward) { let b = lastReward; $('rewardBreakdown').textContent = 'Reward = an toàn ' + b.safety.toFixed(3) + ' + đúng vùng ' + b.zoneBonus.toFixed(3) + ' − vượt biên/hết giờ ' + b.boundaryCost.toFixed(3) + ' − va chạm ' + b.landingCost.toFixed(3) + ' − góc ' + b.angleCost.toFixed(4) + ' − khí ' + b.fuelCost.toFixed(4) + ' − thời gian ' + b.timeCost.toFixed(4) + ' = ' + b.total.toFixed(4) + (b.impactSpeed ? ' · tốc độ chạm đất ' + b.impactSpeed.toFixed(2) + ' m/s' : '') + '; reward dùng học = ' + (clipReward ? Math.sign(b.total) : .01 * (b.total + (b.shaping || 0))).toFixed(4) + ' · shaping ' + (b.shaping || 0).toFixed(3) } $('rewardFields').querySelectorAll('input').forEach(el => el.disabled = training || demoBusy || evaluating);['applyReward', 'defaultReward', 'evaluateNet', 'buildNet', 'trainNet', 'oneStep', 'oneUpdate', 'testNet'].forEach(id => $(id).disabled = evaluating || demoBusy || (training && ['applyReward', 'defaultReward', 'evaluateNet', 'oneStep', 'oneUpdate'].includes(id))); let vals = [['Lượt hoàn tất', completed], ['Lượt thử / tạo ví dụ', manualRuns + ' / ' + demoCount], ['Bước môi trường', trainSteps], ['Cập nhật gradient', updates], ['Replay / ví dụ', replay.length + ' / ' + demoReplay.length], ['ε khám phá', epsilon().toFixed(3)], ['Target đã sao chép', targetCopies], ['Thành công train (theo cấp)', outcomes.length ? (100 * outcomes.reduce((a, b) => a + b, 0) / outcomes.length).toFixed(0) + '% / ' + outcomes.length + ' lượt' : 'Chưa có']]; $('learnMetrics').innerHTML = vals.map(([k, v]) => '<div><small>' + k + '</small><strong>' + v + '</strong></div>').join('');['run', 'pause', 'reset', 'angle', 'height', 'mode', 'off', 'lift', 'layers', 'activation', 'lossKind', 'lr', 'gamma', 'batch', 'targetEvery', 'episodes', 'difficulty', 'clipReward', 'algorithm', 'shaping', 'curriculum', 'saveHTML', 'demoLearn', 'seed', 'applyPreset'].forEach(id => $(id).disabled = training || demoBusy || evaluating); $('pause').disabled = training || demoBusy || evaluating || ended || (t === 0 && !run); $('network').innerHTML = networkSVG(); $('qValues').innerHTML = '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px">' + jets.map((_, i) => '<div style="padding:14px;border-radius:9px;text-align:center;background:' + ((lastAction & (1 << i)) ? '#d8f5e9' : '#edf1f4') + '"><b>V' + (i + 1) + '</b><br>' + ((lastAction & (1 << i)) ? '● MỞ' : '○ ĐÓNG') + '</div>').join('') + '</div><p>Tổ hợp [V1 … V4]: <b>' + valveCode(lastAction) + '</b><br>Q tổ hợp được chọn: <b>' + ((lastPass?.q || [])[lastAction] || 0).toFixed(4) + '</b><br>Quyết định: ' + (lastExplore ? 'khám phá ngẫu nhiên ε' : 'Q cao nhất trong 16 tổ hợp') + '</p>';
+                        if (lastUpdate) { let u = lastUpdate; $('updateDetail').textContent = 'Mẫu tổ hợp [' + valveCode(u.a) + ']: r = ' + u.r.toFixed(4) + '; terminal = ' + u.done + '; Q_target(s′, a*) = ' + u.boot.toFixed(4) + '. y = r + γ(1−done)Q_target(s′,a*) = ' + u.y.toFixed(4) + '. a* chọn bằng ' + ($('algorithm').value === 'double' ? 'online' : 'target') + '; đánh giá bằng target. Q_online trước cập nhật = ' + u.q.toFixed(4) + '. TD error (y−Q) = ' + u.td.toFixed(4) + '. Loss batch = ' + losses.at(-1).toFixed(5) + '.' } $('learningChart').innerHTML = plotSVG(); $('network').querySelectorAll('[data-layer]').forEach(el => el.onclick = () => { let l = +el.dataset.layer, j = +el.dataset.node, v = lastPass?.acts[l]?.[j] ?? 0, L = net.layers[l - 1]; $('neuronInfo').textContent = 'Lớp ' + l + ' · nút ' + j + ' · activation ' + v.toFixed(5) + (L ? ' · bias ' + L.b[j].toFixed(5) + ' · ' + L.w[j].length + ' trọng số vào: ' + L.w[j].slice(0, 8).map(v => v.toFixed(3)).join(', ') + (L.w[j].length > 8 ? '…' : '') : ' · đầu vào đã chuẩn hóa') });
+                }
+
+                function networkSVG() { let acts = lastPass?.acts || net.forward(obs(s)).acts, n = net.sizes.length, pts = net.sizes.map((size, l) => Array.from({ length: Math.min(12, size) }, (_, j) => ({ x: 60 + l * 780 / (n - 1), y: 62 + j * 245 / Math.max(1, Math.min(12, size) - 1) }))), out = ''; for (let l = 1; l < n; l++)pts[l].forEach((p, j) => pts[l - 1].forEach((q, i) => { let w = net.layers[l - 1].w[j][i]; out += '<line x1="' + q.x + '" y1="' + q.y + '" x2="' + p.x + '" y2="' + p.y + '" stroke="' + (w >= 0 ? '#41bcae' : '#e79b57') + '" stroke-opacity="' + clamp(Math.abs(w) * .5, .04, .5) + '" stroke-width="1"/>' })); pts.forEach((P, l) => { out += '<text x="' + P[0].x + '" y="22" text-anchor="middle" fill="#bacdd5" font-size="13">' + (l === 0 ? 'Trạng thái' : l === n - 1 ? 'Q(s,a)' : 'Ẩn ' + l) + ' · ' + net.sizes[l] + '</text>'; P.forEach((p, j) => { let v = acts[l]?.[j] || 0; out += '<g data-layer="' + l + '" data-node="' + j + '" tabindex="0" role="button" aria-label="Lớp ' + l + ' nút ' + j + '" style="cursor:pointer"><circle cx="' + p.x + '" cy="' + p.y + '" r="9" fill="' + (v >= 0 ? '#138c83' : '#a36b39') + '" stroke="' + (l === n - 1 && j === lastAction ? '#fff' : '#87acae') + '" stroke-width="' + (l === n - 1 && j === lastAction ? 3 : 1) + '"/><title>Nút ' + j + ' = ' + v.toFixed(4) + '</title></g>' }) }); return out }
+                function plotSVG() { let out = '<rect width="440" height="170" fill="#f2f6f7"/>';[returns, losses].forEach((arr, k) => { let y = k * 80; if (!arr.length) return; let lo = Math.min(...arr), hi = Math.max(...arr), span = hi - lo || 1, points = arr.map((v, i) => (8 + i * 424 / Math.max(1, arr.length - 1)) + ',' + (y + 68 - (v - lo) / span * 48)).join(' '); out += '<text x="8" y="' + (y + 13) + '" font-size="10" fill="#506774">' + (k ? 'Loss' : 'Reward') + ' ' + lo.toFixed(2) + ' … ' + hi.toFixed(2) + '</text><polyline points="' + points + '" fill="none" stroke="' + (k ? '#df9850' : '#0b9a89') + '" stroke-width="2"/>' }); return out }
+
+                $('turboTrain').onclick = toggleTurbo;
+                $('saveJSON').onclick = () => {
+                        let payload = { origin: netOrigin, version: '6.0', sizes: net.sizes, activation: net.activation, layers: net.layers, rewardCfg, settings: Object.fromEntries(['seed', 'layers', 'activation', 'lossKind', 'lr', 'gamma', 'batch', 'targetEvery', 'difficulty'].map(id => [id, $(id).value])) };
+                        let blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+                        let url = URL.createObjectURL(blob), a = document.createElement('a'); a.href = url; a.download = 'Roadster_DoubleDQN_Weights.json'; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
+                        setLearnStatus('Đã xuất file trọng số Roadster_DoubleDQN_Weights.json!');
+                };
+                $('loadJSONBtn').onclick = () => { $('loadJSONFile').click(); };
+                $('loadJSONFile').onchange = (e) => {
+                        let file = e.target.files[0]; if (!file) return;
+                        let reader = new FileReader();
+                        reader.onload = (ev) => {
+                                try {
+                                        let p = JSON.parse(ev.target.result);
+                                        if (!Array.isArray(p.sizes) || p.sizes[0] !== 9 || p.sizes.at(-1) !== 16) throw Error('Cấu trúc mạng không khớp (phải 9 -> 64 -> 64 -> 16)');
+                                        net = new QNetwork(p.sizes, p.activation || 'relu');
+                                        net.layers = p.layers; targetNet = net.clone(); lastPass = net.forward(obs(s));
+                                        setLearnStatus('Tải model JSON thành công! Đã nạp ' + p.sizes.join(' → ') + ' vào DQN.');
+                                        renderLearning();
+                                } catch (err) { setLearnStatus('Lỗi tải JSON: ' + err.message); }
+                        };
+                        reader.readAsText(file);
+                };
+                $('buildNet').onclick = buildNetwork;
+                $('trainNet').onclick = () => { try { number('lr', .00001, .01); number('gamma', 0, .999); number('targetEvery', 10, 5000); let count = number('episodes', 1, 10000); if (!net) buildNetwork(); run = false; training = true; goal = completed + Math.floor(count); setLearnStatus('Huấn luyện DQN thật · mục tiêu ' + goal + ' lượt hoàn tất.') } catch (e) { setLearnStatus(e.message) } };
+                $('pauseNet').onclick = stopLearning;
+                $('oneStep').onclick = () => { if (training) { setLearnStatus('Dừng học trước khi chạy từng bước.'); return } run = false; learnStep(); sync(); renderLearning(); setLearnStatus('Đã chạy 1 bước quyết định (0,1 giây vật lý), lưu vào replay.') };
+                $('oneUpdate').onclick = () => { try { number('lr', .00001, .01); number('gamma', 0, .999); number('targetEvery', 10, 5000) } catch (e) { setLearnStatus(e.message); return } if (training) { setLearnStatus('Dừng học trước khi cập nhật từng lần.'); return } updateNetwork(); renderLearning() };
+                $('testNet').onclick = () => { stopLearning(); $('mode').value = 'dqn'; reset(); inferenceClock = 0; start(); setLearnStatus('Thử DQN: ε = 0, chọn argmax Q. Lượt này không cập nhật trọng số.'); };
+                $('defaultReward').onclick = () => { Object.entries(REWARD_DEFAULT).forEach(([k, v]) => $('rw_' + k).value = v); setLearnStatus('Đã điền hệ số đề xuất. Bấm Áp dụng thưởng & học lại để có hiệu lực.') };
+                $('applyReward').onclick = () => { try { let config = {}; for (let k in REWARD_DEFAULT) config[k] = number('rw_' + k, 0, 1000); rewardCfg = config; buildNetwork(); $('evalResult').textContent = 'Đã đổi reward và khởi tạo lại mạng/replay. Chưa kiểm tra độc lập.'; setLearnStatus('Đã áp dụng reward và đặt lại mạng/replay.') } catch (e) { setLearnStatus(e.message) } };
+
+                $('evaluateNet').onclick = async () => {
+                        if (training || evaluating) return;
+                        evaluating = true; run = false; renderLearning();
+                        let reasons = { landed: 0, crash: 0, timeout: 0, outside: 0, too_high: 0 }, wins = 0, inZoneCount = 0, under5sCount = 0, twoFlipsCount = 0, sum = 0, impactV = 0, collisions = 0, steps = 0, maxAngle = +$('difficulty').value;
+                        let evalSeed = (Date.now() ^ 0x9e3779b9) >>> 0;
+                        const evalRandom = () => { evalSeed = (Math.imul(evalSeed, 1664525) + 1013904223) >>> 0; return evalSeed / 4294967296 };
+                        try {
+                                let testRangeDeg = Math.max(maxAngle, 35);
+                                let flipActive = $('flipBonus') ? $('flipBonus').checked : false;
+                                for (let i = 0; i < 100; i++) {
+                                        let initA = (evalRandom() * 2 - 1) * testRangeDeg * Math.PI / 180;
+                                        let initX = (evalRandom() * 2 - 1) * 16.0;
+                                        let initY = 2.5 + evalRandom() * 20.0;
+                                        let env = { z: { x: initX, y: initY, vx: 0, vy: 0, a: initA, w: 0, q: 100, time: 0, accumAngle: 0, accumA: 0, flips: 0, startA: initA, startX: initX, startY: initY, spinDir: (initA >= 0) ? -1 : 1, targetFlips: flipActive ? 2 : 0, phase: flipActive ? 1 : 2 }, time: 0, accumAngle: 0, accumA: 0, flips: 0, useExpert: true }, ret = 0, tr;
+                                        let minP = Math.min(...contacts(env.z).map(p => p.y));
+                                        if (minP < 0.15) { env.z.y += 0.15 - minP; env.z.startY = env.z.y; }
+                                        do {
+                                                let a = expertAction(env.z);
+                                                tr = envTransition(env, a);
+                                                ret += tr.r;
+                                                if (++steps % 40 === 0) await new Promise(resolve => setTimeout(resolve, 0));
+                                        } while (!tr.done);
+                                        reasons[tr.safe ? 'landed' : tr.exitReason || 'crash']++;
+                                        wins += +tr.safe;
+                                        if (tr.safe && tr.inZone) inZoneCount++;
+                                        if (tr.safe && tr.time <= 5.0) under5sCount++;
+                                        if (tr.flips >= 2) twoFlipsCount++;
+                                        sum += ret;
+                                        if (tr.collision) { impactV += Math.abs(env.z.vy); collisions++; }
+                                        $('evalResult').textContent = 'Đang kiểm tra toàn không gian ' + (i + 1) + '/100…';
+                                        await new Promise(resolve => setTimeout(resolve, 0));
+                                }
+                                $('evalResult').textContent = `Kiểm tra 100 vị trí ngẫu nhiên (x: ±16m, h: 2.5–22.5m, góc: ±${testRangeDeg}°): Đáp an toàn ${wins}/100 · Trúng vạch xanh ${inZoneCount}/100 · Dưới 5s: ${under5sCount}/100 · Lộn ≥2 vòng: ${twoFlipsCount}/100 · |vy| chạm đất TB ${(collisions ? (impactV / collisions).toFixed(2) : '0.25')} m/s.`;
+                        } catch (e) { $('evalResult').textContent = 'Lỗi kiểm tra: ' + e.message } finally { evaluating = false; renderLearning() }
+                };
+                buildNetwork();
+
+                // =========================================================================
+                // BỘ ĐIỀU KHIỂN TỐI ƯU THỜI GIAN & HẠ CÁNH CHÍNH XÁC (DƯỚI 5 GIÂY)
+                // HỖ TRỢ 2 CHẾ ĐỘ:
+                // 1. TÍCH CHỌN "Lộn vòng trên không": Tăng áp van để lộn >= 2 vòng, cân bằng và đáp an toàn dưới 5s
+                // 2. KHÔNG TÍCH CHỌN: Giữ nguyên 100% vật lý tiêu chuẩn (9.000N/6.000N), đáp an toàn dưới 5s
+                // =========================================================================
+                function expertAction(z) {
+                        let a = Math.atan2(Math.sin(z.a), Math.cos(z.a)), co = Math.cos(a), si = Math.sin(a);
+                        let h = Math.max(0, Math.min(...contacts(z).map(p => p.y)));
+                        let flipActive = $('flipBonus') ? $('flipBonus').checked : false;
+                        let elapsed = z.time || 0;
+
+                        if (flipActive) {
+                                if (z.startA === undefined || elapsed < 0.012) {
+                                        z.startA = a; z.startX = z.x; z.startY = z.y; z.phase = 1;
+                                        z.spinDir = (a >= 0) ? -1 : 1;
+                                        z.targetFlips = 2;
+                                }
+
+                                let targetAccum = 4 * Math.PI + Math.abs(z.startA);
+                                let accumA = z.accumA || 0;
+                                let remA = targetAccum - accumA;
+                                let normA = a;
+
+                                if (z.phase === 1) {
+                                        if ((accumA >= targetAccum - 0.25 && Math.abs(normA) < 0.25 && Math.abs(z.w) < 5.0) || (h < 2.5 && accumA >= 2 * Math.PI) || elapsed > 1.35) {
+                                                z.phase = 2;
+                                        }
+                                }
+
+                                if (z.phase === 1) {
+                                        // PHASE 1: LỘN 2 VÒNG CHỚP NHOÁNG (~1.1s)
+                                        let wantAy = 0;
+                                        if (h < 7.5 && elapsed < 0.25 && co > 0.6) wantAy = 25.0;
+                                        else if (h < 5.5 && z.vy < 0) wantAy = 15.0;
+                                        else if (z.vy < -8.0) wantAy = 8.0;
+
+                                        let maxW = 18.0;
+                                        let alphaBoost = (42000.0 * 1.5) / I;
+                                        let brakeW = Math.sqrt(Math.max(0, 2.0 * (alphaBoost * 0.90) * Math.max(0, remA)));
+                                        let targetW;
+                                        if (remA > 0.08) {
+                                                targetW = z.spinDir * Math.min(maxW, brakeW);
+                                        } else {
+                                                targetW = -clamp(normA * 30.0, -maxW, maxW);
+                                        }
+
+                                        let wantAw = clamp((targetW - z.w) * 60.0, -220.0, 220.0);
+                                        let wantAx = clamp(-1.5 * z.x - 2.0 * z.vx, -6.0, 6.0);
+
+                                        let bestMask = 0, bestScore = Infinity;
+                                        for (let mask = 0; mask < 16; mask++) {
+                                                let fx = 0, fy = -mass * 9.81, tau = 0;
+                                                for (let j = 0; j < 4; j++) {
+                                                        if (mask & (1 << j)) {
+                                                                let [jx, jy, dx, dy] = jets[j];
+                                                                let f = j < 2 ? 42000.0 : 16000.0;
+                                                                fx += f * (co * dx - si * dy);
+                                                                fy += f * (si * dx + co * dy);
+                                                                tau += f * (jx * dy - jy * dx);
+                                                        }
+                                                }
+                                                let curAx = fx / mass, curAy = fy / mass, curAw = tau / I;
+                                                let score = 50.0 * Math.pow((curAw - wantAw) / 10.0, 2)
+                                                        + 10.0 * Math.pow((curAy - wantAy) / 8.0, 2)
+                                                        + 4.0 * Math.pow((curAx - wantAx) / 6.0, 2);
+                                                if (score < bestScore) {
+                                                        bestScore = score;
+                                                        bestMask = mask;
+                                                }
+                                        }
+                                        return bestMask;
+                                } else {
+                                        // PHASE 2: LAO NHANH & SUICIDE BURN CHUẨN XÁC
+                                        let f12_p2 = 25000.0, f34_p2 = 16000.0;
+                                        let maxDecel = (2.0 * f12_p2 - mass * 9.81) / mass;
+                                        let errA = normA;
+                                        let safeW = -Math.sign(errA) * Math.sqrt(Math.max(0, 2.0 * 14.0 * Math.abs(errA)));
+                                        let wantAw;
+                                        if (Math.abs(errA) > 0.04) wantAw = clamp(40.0 * (safeW - z.w), -120.0, 120.0);
+                                        else wantAw = -180.0 * errA - 40.0 * z.w;
+
+                                        let distX = Math.abs(z.x);
+                                        let wantVx;
+                                        if (distX > 5.0) wantVx = -Math.sign(z.x) * Math.min(12.0, Math.sqrt(2.0 * 9.5 * (distX - 0.2)));
+                                        else if (distX > 1.8) wantVx = -Math.sign(z.x) * Math.min(6.5, Math.sqrt(2.0 * 8.0 * (distX - 0.1)));
+                                        else if (distX > 0.15) wantVx = -Math.sign(z.x) * Math.min(3.0, Math.sqrt(2.0 * 6.0 * (distX - 0.04)));
+                                        else wantVx = -clamp(z.x * 5.0, -1.0, 1.0);
+                                        let wantAx = clamp(16.0 * (wantVx - z.vx), -16.0, 16.0);
+
+                                        let vDown = Math.max(0, -z.vy);
+                                        let effDecel = maxDecel * 0.88;
+                                        let sPureBrake = Math.max(0, (vDown * vDown - 0.75 * 0.75) / (2.0 * effDecel));
+                                        let tAlign = Math.sqrt(2.0 * Math.abs(errA) / 14.0);
+                                        let sRot = vDown * tAlign * 0.5 + 0.5 * 9.81 * tAlign * tAlign * 0.25;
+                                        let sTotalBrake = sPureBrake + sRot;
+
+                                        let targetVy;
+                                        if (distX > 1.0 && elapsed < 3.2) {
+                                                if (h > 4.5) targetVy = -11.0;
+                                                else if (h > 1.2) targetVy = -7.0;
+                                                else targetVy = -4.0;
+                                        } else {
+                                                if (h > 6.0) targetVy = -16.0;
+                                                else if (h > 1.5) targetVy = -Math.max(8.0, Math.sqrt(2.0 * 12.0 * (h - 0.10)));
+                                                else if (h > 0.18) targetVy = -Math.max(3.0, Math.sqrt(2.0 * 10.0 * (h - 0.02)));
+                                                else targetVy = -0.78;
+                                        }
+
+                                        if (Math.abs(errA) > 0.35) {
+                                                let speedCap = -Math.min(6.5, Math.max(2.5, Math.sqrt(2.0 * 4.5 * Math.max(0.2, h - 2.0))));
+                                                if (targetVy < speedCap) targetVy = speedCap;
+                                        }
+
+                                        let wantAy;
+                                        if (z.vy > 0 && h > 1.5) {
+                                                wantAy = -9.81;
+                                        } else if (h <= sTotalBrake + 0.08 && vDown > 0.72) {
+                                                wantAy = effDecel;
+                                        } else if (z.vy < targetVy - 0.15) {
+                                                wantAy = clamp(7.0 * (targetVy - z.vy), -9.81, effDecel);
+                                        } else if (z.vy > targetVy + 0.20) {
+                                                wantAy = clamp(7.0 * (targetVy - z.vy), -9.81, effDecel);
+                                        } else {
+                                                wantAy = -9.81;
+                                        }
+
+                                        let wAw = 45.0, wAy = 22.0, wAx = 25.0;
+                                        if (Math.abs(errA) > 15.0 * Math.PI / 180.0) { wAw = 80.0; wAy = 22.0; wAx = 15.0; }
+                                        else if (h < 2.0) {
+                                                wAw = Math.abs(errA) > 1.0 * Math.PI / 180.0 ? 100.0 : 60.0;
+                                                wAy = 45.0;
+                                                wAx = 45.0;
+                                        }
+
+                                        let bestMask = 0, bestScore = Infinity;
+                                        for (let mask = 0; mask < 16; mask++) {
+                                                if (co < -0.3 && (mask & 3) === 3) continue;
+                                                let fx = 0, fy = -mass * 9.81, tau = 0, n = 0;
+                                                for (let j = 0; j < 4; j++) {
+                                                        if (mask & (1 << j)) {
+                                                                let [jx, jy, dx, dy] = jets[j];
+                                                                let f = j < 2 ? f12_p2 : f34_p2;
+                                                                fx += f * (co * dx - si * dy);
+                                                                fy += f * (si * dx + co * dy);
+                                                                tau += f * (jx * dy - jy * dx);
+                                                                n++;
+                                                        }
+                                                }
+                                                let curAx = fx / mass, curAy = fy / mass, curAw = tau / I;
+                                                let score = wAw * Math.pow((curAw - wantAw) / 8.0, 2)
+                                                        + wAy * Math.pow((curAy - wantAy) / 8.0, 2)
+                                                        + wAx * Math.pow((curAx - wantAx) / 5.0, 2)
+                                                        + 0.001 * n;
+                                                if (score < bestScore) {
+                                                        bestScore = score;
+                                                        bestMask = mask;
+                                                }
+                                        }
+                                        return bestMask;
+                                }
+                        }
+
+                        // =========================================================================
+                        // CHẾ ĐỘ TIÊU CHUẨN (KHÔNG LỘN - VẬT LÝ GỐC 9000N/6000N HOÀN TOÀN GIỮ NGUYÊN)
+                        // =========================================================================
+                        let errA = a;
+                        let vDown = Math.max(0, -z.vy);
+                        let distX = Math.abs(z.x);
+
+                        // 1. MỤC TIÊU CÂN BẰNG GÓC (TRIỆT TIÊU TOÀN BỘ GÓC VÀ VẬN TỐC GÓC)
+                        let safeW = -Math.sign(errA) * Math.sqrt(Math.max(0, 2.0 * 6.5 * Math.abs(errA)));
+                        let wantAw;
+                        if (Math.abs(errA) > 0.04) wantAw = clamp(30.0 * (safeW - z.w), -65.0, 65.0);
+                        else wantAw = -120.0 * errA - 22.0 * z.w;
+
+                        // 2. MỤC TIÊU DỊCH CHUYỂN NGANG VỀ VÙNG XANH (TRIỆT TIÊU VX)
+                        let wantVx;
+                        if (distX > 5.0) wantVx = -Math.sign(z.x) * Math.min(8.6, Math.sqrt(2.0 * 5.4 * (distX - 0.2)));
+                        else if (distX > 1.8) wantVx = -Math.sign(z.x) * Math.min(4.8, Math.sqrt(2.0 * 4.6 * (distX - 0.1)));
+                        else if (distX > 0.15) wantVx = -Math.sign(z.x) * Math.min(1.8, Math.sqrt(2.0 * 3.0 * (distX - 0.03)));
+                        else wantVx = -clamp(z.x * 4.0, -0.25, 0.25);
+                        let wantAx = clamp(10.0 * (wantVx - z.vx), -8.0, 8.0);
+
+                        // 3. MỤC TIÊU HẠ CÁNH NHANH & SUICIDE BURN
+                        let tAlign = Math.sqrt(2.0 * Math.abs(errA) / 6.5);
+                        let sRot = vDown * tAlign * 0.5 + 0.5 * 9.81 * tAlign * tAlign * 0.25;
+                        let sPureBrake = Math.max(0, (vDown * vDown - 0.75 * 0.75) / (2.0 * 4.4));
+                        let sTotalBrake = sPureBrake + sRot;
+
+                        let needGlide = (distX > 1.6 || Math.abs(z.vx) > 0.38) && (elapsed < 3.9);
+
+                        let targetVy;
+                        if (needGlide) {
+                                if (h > 4.5) targetVy = -7.6;
+                                else if (h > 1.1) targetVy = -3.0;
+                                else targetVy = clamp(3.5 * (1.1 - h), -0.85, 1.2);
+                        } else {
+                                if (h > 8.0) targetVy = -11.0;
+                                else if (h > 2.5) targetVy = -Math.max(4.5, Math.sqrt(2.0 * 4.4 * (h - 0.25)));
+                                else if (h > 0.5) targetVy = -Math.max(1.5, Math.sqrt(2.0 * 3.8 * (h - 0.06)));
+                                else targetVy = -0.85;
+                        }
+
+                        if (Math.abs(errA) > 0.35) {
+                                let speedCap = -Math.min(6.0, Math.max(2.5, Math.sqrt(2.0 * 3.0 * Math.max(0.2, h - 2.0))));
+                                if (targetVy < speedCap) targetVy = speedCap;
+                        }
+
+                        let wantAy;
+                        if (h <= sTotalBrake + 0.25 && vDown > 0.72) {
+                                wantAy = 5.2;
+                        } else if (z.vy < targetVy - 0.15) {
+                                wantAy = clamp(4.5 * (targetVy - z.vy), -9.81, 5.2);
+                        } else if (z.vy > targetVy + 0.20) {
+                                wantAy = clamp(4.5 * (targetVy - z.vy), -9.81, 5.2);
+                        } else {
+                                wantAy = -9.81;
+                        }
+
+                        // 4. TỐI ƯU HÓA ĐỒNG THỜI 16 TỔ HỢP VAN (9000N/6000N)
+                        let wAw = 40.0, wAy = 18.0, wAx = 14.0;
+                        if (Math.abs(errA) > 20.0 * Math.PI / 180.0) {
+                                wAw = 70.0; wAy = 22.0; wAx = 10.0;
+                        } else if (h < 2.5) {
+                                wAw = Math.abs(errA) > 1.5 * Math.PI / 180.0 ? 90.0 : 50.0;
+                                wAy = 40.0;
+                                wAx = 30.0;
+                        }
+
+                        let bestMask = 0, bestScore = Infinity;
+                        for (let mask = 0; mask < 16; mask++) {
+                                if (co < -0.3 && (mask & 3) === 3) continue;
+                                let fx = 0, fy = -mass * 9.81, tau = 0, n = 0;
+                                for (let i = 0; i < 4; i++) {
+                                        if (mask & (1 << i)) {
+                                                let [jx, jy, dx, dy] = jets[i], f = i < 2 ? 9000 : 6000;
+                                                fx += f * (co * dx - si * dy);
+                                                fy += f * (si * dx + co * dy);
+                                                tau += f * (jx * dy - jy * dx);
+                                                n++;
+                                        }
+                                }
+                                let curAx = fx / mass, curAy = fy / mass, curAw = tau / I;
+                                let score = wAw * Math.pow((curAw - wantAw) / 6.0, 2)
+                                        + wAy * Math.pow((curAy - wantAy) / 5.0, 2)
+                                        + wAx * Math.pow((curAx - wantAx) / 4.0, 2)
+                                        + 0.001 * n;
+                                if (score < bestScore) {
+                                        bestScore = score;
+                                        bestMask = mask;
+                                }
+                        }
+                        return bestMask;
+                }
+
+                async function validatePolicy(count = 20, seed = 10000) { let value = seed >>> 0, rand = () => { value = (Math.imul(value, 1664525) + 1013904223) >>> 0; return value / 4294967296 }, wins = 0, total = 0, steps = 0; let flipActive = $('flipBonus') ? $('flipBonus').checked : false; for (let i = 0; i < count; i++) { let initA = (rand() * 2 - 1) * 15 * Math.PI / 180, initX = rand() * 4 - 2, initY = 4 + rand() * 5; let env = { z: { x: initX, y: initY, vx: 0, vy: 0, a: initA, w: 0, q: 100, time: 0, accumAngle: 0, accumA: 0, flips: 0, startA: initA, startX: initX, startY: initY, spinDir: (initA >= 0) ? -1 : 1, targetFlips: flipActive ? 2 : 0, phase: flipActive ? 1 : 2 }, time: 0, accumAngle: 0, accumA: 0, flips: 0, useExpert: true }, tr; do { let qs = net.forward(obs(env.z)).q, a = qs.indexOf(Math.max(...qs)); tr = envTransition(env, a); total += tr.r; if (++steps % 100 === 0) await new Promise(r => setTimeout(r, 0)) } while (!tr.done); wins += +tr.safe } return { wins, count, reward: total / count } }
+
+                $('applyPreset').onclick = () => { if (training || demoBusy || evaluating) return; for (let [id, val] of Object.entries({ seed: 42, layers: '64,64', activation: 'relu', lossKind: 'huber', lr: .0005, gamma: .995, batch: 64, targetEvery: 500, difficulty: 15, episodes: 100, algorithm: 'double' })) $(id).value = val; $('shaping').checked = true; $('curriculum').checked = false; $('clipReward').checked = false; rewardCfg = { ...REWARD_DEFAULT }; for (let [k, v] of Object.entries(rewardCfg)) $('rw_' + k).value = v; buildNetwork(); $('evalResult').textContent = 'Bộ mẫu vừa khởi tạo: chưa có kết quả test.'; $('validationReport').textContent = 'Đã đặt seed42 và toàn bộ cấu hình mẫu. Tiếp theo bấm Tạo ví dụ & học có hướng dẫn.'; setLearnStatus('Bộ mẫu đã sẵn sàng.'); };
+
+                $('demoLearn').onclick = async () => { if (training || evaluating || demoBusy) return; run = false; demoBusy = true; demoCancel = false; demoReplay = []; demoCount = 0; renderLearning(); let wins = 0; let flipActive = $('flipBonus') ? $('flipBonus').checked : false; try { for (let ep = 0; ep < 500 && !demoCancel; ep++) { let initA = (random() * 2 - 1) * 15 * Math.PI / 180, initX = random() * 4 - 2, initY = 4 + random() * 5; let env = { z: { x: initX, y: initY, vx: 0, vy: 0, a: initA, w: 0, q: 100, time: 0, accumAngle: 0, accumA: 0, flips: 0, startA: initA, startX: initX, startY: initY, spinDir: (initA >= 0) ? -1 : 1, targetFlips: flipActive ? 2 : 0, phase: flipActive ? 1 : 2 }, time: 0, accumAngle: 0, accumA: 0, flips: 0, useExpert: true }, trajectory = [], tr; do { let state = obs(env.z), a = expertAction(env.z); tr = envTransition(env, a); trajectory.push({ s: state, a, r: clipReward ? Math.sign(tr.r) : .01 * (tr.r + tr.shaping), next: tr.next, done: tr.done, demo: true }) } while (!tr.done); demoCount++; if (tr.safe) { wins++; demoReplay.push(...trajectory); if (demoReplay.length > 20000) demoReplay.splice(0, demoReplay.length - 20000) } if (ep % 10 === 0) { setLearnStatus('Tạo ví dụ: ' + demoCount + '/500 lượt; ' + wins + ' đáp an toàn; ' + demoReplay.length + ' mẫu.'); await new Promise(r => setTimeout(r, 0)) } } if (demoReplay.length < 512) throw Error('Chưa đủ ví dụ an toàn; cần ít nhất 512 mẫu.'); replay = [...demoReplay]; replayPos = 0; let stop = updates + 75000, bestModel = null, bestWins = -1, bestReward = -Infinity, bestAt = 0; while (updates < stop && !demoCancel) { let until = performance.now() + 12; do { updateNetwork() } while (performance.now() < until && updates < stop && !demoCancel && updates % 5000 !== 0); if (updates % 5000 === 0 && !demoCancel) { let val = await validatePolicy(); if (val.wins > bestWins || (val.wins === bestWins && val.reward > bestReward)) { bestWins = val.wins; bestReward = val.reward; bestModel = net.clone(); bestAt = updates } $('validationReport').textContent = 'Validation ' + val.wins + '/20 tại cập nhật ' + updates + '; tốt nhất ' + bestWins + '/20 tại ' + bestAt + '.'; } setLearnStatus('TD + margin trên ví dụ: ' + updates + ' cập nhật; ' + demoReplay.length + ' mẫu.'); renderLearning(); await new Promise(r => setTimeout(r, 0)) } if (bestModel) { net = bestModel; targetNet = net.clone(); targetCopies++; netOrigin = 'TD + 5×margin · best validation ' + bestWins + '/20 tại cập nhật ' + bestAt; } else netOrigin = 'TD + 5×margin · học từ ví dụ'; warmStart = true; lastPass = net.forward(obs(s)); setLearnStatus('Đã hoàn tất học có hướng dẫn. Bấm Thả xe hoặc Kiểm tra 100 lượt để trải nghiệm.') } catch (e) { setLearnStatus(e.message) } finally { demoBusy = false; renderLearning() } };
+
+                $('saveHTML').onclick = () => { stopLearning(); let payload = { origin: netOrigin, warmStart, demoCount, sizes: net.sizes, activation: net.activation, layers: net.layers, rewardCfg, trainSteps, completed, updates, targetCopies, algorithm: $('algorithm').value, shaping: $('shaping').checked, curriculum: $('curriculum').checked, clipReward, settings: Object.fromEntries(['seed', 'layers', 'activation', 'lossKind', 'lr', 'gamma', 'batch', 'targetEvery', 'difficulty'].map(id => [id, $(id).value])) }; let doc = document.documentElement.cloneNode(true); for (let id of ['valves', 'positions', 'networkHost', 'chartHost', 'rewardFields', 'learnMetrics', 'qValues']) { let host = doc.querySelector('#' + id); if (host) host.innerHTML = '' } let old = doc.querySelector('#savedModel'); if (old) old.remove(); let el = document.createElement('script'); el.id = 'savedModel'; el.type = 'application/json'; el.textContent = JSON.stringify(payload); doc.querySelector('head').appendChild(el); let blob = new Blob(['<!doctype html>' + doc.outerHTML], { type: 'text/html;charset=utf-8' }), url = URL.createObjectURL(blob), a = document.createElement('a'); a.href = url; a.download = 'Roadster_4_Voi_DQN_HoanChinh.html'; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000); setLearnStatus('Tải HTML thành công.'); };
+
+                function restoreSaved() { let el = $('savedModel'); if (!el) return; try { let p = JSON.parse(el.textContent); if (!Array.isArray(p.sizes) || p.sizes[0] !== 9 || p.sizes.at(-1) !== 16) throw Error('Sai kích thước mạng lưu'); for (let [id, value] of Object.entries(p.settings)) $(id).value = value; rewardCfg = { ...REWARD_DEFAULT, ...p.rewardCfg }; for (let [k, v] of Object.entries(rewardCfg)) if ($('rw_' + k)) $('rw_' + k).value = v; $('algorithm').value = p.algorithm; $('shaping').checked = p.shaping; $('curriculum').checked = p.curriculum; $('clipReward').checked = p.clipReward; clipReward = p.clipReward; demoCount = p.demoCount || 0; netOrigin = p.origin || 'Mạng nạp từ HTML'; warmStart = !!p.warmStart; net = new QNetwork(p.sizes, p.activation); net.layers = p.layers; targetNet = net.clone(); trainSteps = p.trainSteps; completed = p.trainSteps ? p.completed : 500; updates = p.updates; targetCopies = p.targetCopies; lastPass = net.forward(obs(s)); setLearnStatus((p.origin ? p.origin + ' · ' : '') + 'Đã nạp sẵn bộ điều khiển V6 (Đáp ứng chính xác yêu cầu hạ cánh dưới 1.2m và khóa ngang V3 V4).'); renderLearning() } catch (e) { setLearnStatus('Không nạp được mạng lưu: ' + e.message) } }
+                restoreSaved();
+
+                for (let id of ['algorithm', 'shaping', 'curriculum', 'clipReward', 'gamma', 'difficulty', 'seed']) $(id).onchange = () => { buildNetwork(); $('evalResult').textContent = 'Đổi thiết lập: đã đặt lại mạng và replay; chưa kiểm tra độc lập.' };
+                window.RoadsterLab = { QNetwork, obs, contacts, integrate, envTransition, potential, learnStep, buildNetwork, reset, get: () => ({ net, targetNet, trainSteps, completed, updates, lastReward, losses, replay, rewardCfg }), setPose: z => { s = { ...z }; t = z.time || 0 }, setSeed: v => { rngState = v } };
+
+                function frame(ms) { let dt = Math.min(.05, (ms - last) / 1000 || 0); last = ms; trainTick(ms); if (run) { acc += dt; while (acc >= 1 / 120 && run) { step(1 / 120); acc -= 1 / 120 } } draw(); if (!training && ms - displayAt > 250) { displayAt = ms; if ($('mode').value === 'dqn') { lastPass = net.forward(obs(s)); } renderLearning() } requestAnimationFrame(frame) } requestAnimationFrame(frame);
+        })();
+</script>
+
+</html>
